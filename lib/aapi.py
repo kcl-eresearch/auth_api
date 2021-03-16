@@ -1,4 +1,6 @@
 import argparse
+import flask
+import json
 import ldap
 import mysql.connector
 import os
@@ -7,7 +9,7 @@ import sys
 import syslog
 import yaml
 
-class auth_api:
+class aapi:
     cnx = None
     config = {}
     ldapc = None
@@ -128,4 +130,8 @@ class auth_api:
         existing = get_user_ssh_keys(username)
         if not existing:
             return False
-        
+
+    def flask_response(self, data):
+        resp = flask.Response(json.dumps(data))
+        resp.headers['Content-Type'] = 'application/json'
+        return resp
