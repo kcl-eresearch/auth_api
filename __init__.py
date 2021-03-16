@@ -130,9 +130,7 @@ def set_user_ssh_keys(username, ssh_keys):
 Encode response as JSON and return it via Flask
 '''
 def flask_response(data, code=200):
-    resp = flask.Response(json.dumps(data))
-    resp.content_type = 'application/json'
-    resp.status_code = code
+    resp = flask.Response(json.dumps(data), status=code, content_type='application/json')
     return resp
 
 '''
