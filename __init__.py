@@ -17,7 +17,7 @@ def begin(config_dir="/etc/auth_api"):
         config_file = f"{config_dir}/{file}.yaml"
         try:
             with open(config_file) as fh:
-                config["file`"] = yaml.safe_load(fh)
+                config[file] = yaml.safe_load(fh)
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, f"Failed loading {config_file}: {e}")
             return False
@@ -137,7 +137,7 @@ def flask_response(data, code=200):
 End of functions library
 '''
 
-config = None
+config = {}
 cnx = None
 ldapc = None
 
@@ -152,13 +152,15 @@ Status if nothing requested - also used for monitoring
 '''
 @app.route('/')
 def route_root():
-    begin()
+    if not begin():
+        return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
+
     try:
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT COUNT(*) AS user_count FROM users")
         result = cursor.fetchall()
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of users table): {e}")
-        return flask_response({"status": "ERROR"}, 500)
+        return flask_response({"status": "ERROR", "detail": "Failed getting user count"}, 500)
 
     return flask_response({"status": "OK", "user_count": result[0]["user_count"]})
