@@ -129,9 +129,10 @@ def set_user_ssh_keys(username, ssh_keys):
 '''
 Encode response as JSON and return it via Flask
 '''
-def flask_response(data):
+def flask_response(data, code=200):
     resp = flask.Response(json.dumps(data))
-    resp.headers['Content-Type'] = 'application/json'
+    resp.content_type = 'application/json'
+    resp.status_code = code
     return resp
 
 '''
@@ -160,6 +161,6 @@ def route_root():
         result = cursor.fetchall()
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of users table): {e}")
-        return flask_response({"status": "ERROR"})
+        return flask_response({"status": "ERROR"}, 500)
 
     return flask_response({"status": "OK", "user_count": result[0]["user_count"]})
