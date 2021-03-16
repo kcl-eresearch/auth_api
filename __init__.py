@@ -140,7 +140,6 @@ End of functions library
 config = None
 cnx = None
 ldapc = None
-begin()
 
 app = flask.Flask(__name__)
 
@@ -153,6 +152,7 @@ Status if nothing requested - also used for monitoring
 '''
 @app.route('/')
 def route_root():
+    begin()
     try:
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT COUNT(*) AS user_count FROM users")
