@@ -138,6 +138,7 @@ def flask_response(data):
 End of functions library
 '''
 
+config = None
 cnx = None
 ldapc = None
 begin()
@@ -159,6 +160,6 @@ def route_root():
         result = cursor.fetchall()
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of users table): {e}")
-        return flash_response({"status": "ERROR"})
+        return flask_response({"status": "ERROR"})
 
     return flask_response({"status": "OK", "user_count": result[0]["user_count"]})
