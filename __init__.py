@@ -37,7 +37,7 @@ def init_ldap(self):
     try:
         ldap.set_option(ldap.OPT_NETWORK_TIMEOUT, 10)
         ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, config["ldap"]["ca_file"])
-        ldapc =  ldap.initialize(f"ldaps://{config['ldap']['host']}:636")
+        ldapc = ldap.initialize(f"ldaps://{config['ldap']['host']}:636")
         ldapc.set_option(ldap.OPT_REFERRALS, 0)
         ldapc.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
         ldapc.simple_bind_s(config["ldap"]["username"], config["ldap"]["password"])
@@ -126,15 +126,39 @@ def set_user_ssh_keys(username, ssh_keys):
     if not existing:
         return False
 
+'''
+Encode response as JSON and return it via Flask
+'''
 def flask_response(data):
     resp = flask.Response(json.dumps(data))
     resp.headers['Content-Type'] = 'application/json'
     return resp
 
+'''
+End of functions library
+'''
+
+cnx = None
+ldapc = None
 begin()
 
 app = flask.Flask(__name__)
 
+'''
+Flask URI routing
+'''
+
+'''
+Status if nothing requested - also used for monitoring
+'''
 @app.route('/')
 def route_root():
-    flask_response({'status': 'OK'})
+    try:
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT COUNT(*) AS user_count FROM users")
+        result = cursor.fetchall()
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of users table): {e}")
+        return flash_response({"status": "ERROR"})
+
+    return flask_response({"status": "OK", "user_count": result[0]["user_count"]})
