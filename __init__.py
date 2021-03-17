@@ -212,7 +212,7 @@ def api_before_request():
         return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
 
     if not auth_request(flask.request.path, flask.request.method, flask.request.remote_user):
-        return flask_response({"status": "ERROR", "detail": "Access denied"}, 403)
+        return flask_response({"status": "ERROR", "detail": "Forbidden"}, 403)
 
 
 '''
@@ -239,3 +239,7 @@ Return a list of user's SSH public keys
 '''
 #@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
 #def api_get_ssh_keys(username):
+
+@app.errorhandler(404)
+def api_not_found():
+    return flask_response({"status": "ERROR", "detail": "Not found"}, 404)
