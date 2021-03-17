@@ -147,6 +147,7 @@ def auth_request(path, method, user):
 
     # Deny anonymous access
     if user in ["", None]:
+        sys.stderr.write("Access denied: empty username\n")
         return False
 
     # Allow anyone to access status page
@@ -155,11 +156,13 @@ def auth_request(path, method, user):
 
     # Deny users not in config file
     if user not in [config["main"]["auth_user_web"], config["main"]["auth_user_bastion"]]:
+        sys.stderr.write("Access denied: username not authorised\n")
         return False
 
     # Handle bogus paths
     m = re.match(r'^/v[0-9]+/([a-z]+)/[a-z0-9]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?', path)
     if not m:
+        sys.stderr.write("Access denied: invalid API path\n")
         return False
 
     req_function = m.group(1)
@@ -179,7 +182,10 @@ def auth_request(path, method, user):
         ]
     }
 
-    return (req_function, method) in permissions[user]
+    if (req_function, method) in permissions[user]:
+        return True
+
+    sys.stderr.write("Access denied: no valid permissions\n")
 
 '''
 End of functions library
@@ -234,3 +240,11 @@ Return a list of user's SSH public keys
 '''
 #@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
 #def api_get_ssh_keys(username):
+
+'''
+Close DB connections etc.
+'''
+@app.after_request
+def api_after_request():
+    global cnx
+    cnx.close()
