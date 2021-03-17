@@ -55,7 +55,7 @@ Get a user's details from LDAP
 '''
 def get_ldap_user(username):
     global ldapc
-    result = ldapc.result(ldapc.search(config["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)({config['ldap']['attr_username']}={username}))", [config["ldap"]["attr_email"], config["ldap"]["attr_display_name"]]))
+    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)({config['ldap']['attr_username']}={username}))", [config["ldap"]["attr_email"], config["ldap"]["attr_display_name"]]))
     if len(result) != 2:
         return {}
 
@@ -153,11 +153,8 @@ def auth_request(path, method, user):
     if path == "/":
         return True
 
-    for k in config.keys():
-        sys.stderr.write("%s: %s\n" % (k, config[k]))
-
     # Deny users not in config file
-    if user not in [config["auth_user_web"], config["auth_user_bastion"]]:
+    if user not in [config["main"]["auth_user_web"], config["main"]["auth_user_bastion"]]:
         return False
 
     # Handle bogus paths
@@ -168,7 +165,7 @@ def auth_request(path, method, user):
     req_function = m.group(1)
 
     permissions = {
-        config["auth_user_web"]: [
+        config["main"]["auth_user_web"]: [
             ("ssh_keys", "GET"),
             ("ssh_keys", "POST"),
             ("vpn_keys", "GET"),
@@ -176,7 +173,7 @@ def auth_request(path, method, user):
             ("auth_attempts", "GET"),
             ("auth_attempts", "POST")
         ],
-        config["auth_user_bastion"]: [
+        config["main"]["auth_user_bastion"]: [
             ("ssh_approved", "GET"),
             ("vpn_approved", "GET")
         ]
