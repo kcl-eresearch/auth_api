@@ -42,7 +42,7 @@ def init_ldap():
         ldapc = ldap.initialize(f"ldaps://{config['ldap']['host']}:636")
         ldapc.set_option(ldap.OPT_REFERRALS, 0)
         ldapc.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
-        ldapc.simple_bind_s(config["ldap"]["username"], config["ldap"]["password"])
+        ldapc.simple_bind_s(config["ldap"]["bind_dn"], config["ldap"]["bind_pw"])
     except Exception as e:
         sys.stderr.write(f"Failed connecting to LDAP: {e}\n")
         return False
