@@ -241,5 +241,5 @@ Return a list of user's SSH public keys
 #def api_get_ssh_keys(username):
 
 @app.errorhandler(404)
-def api_not_found():
+def api_not_found(e):
     return flask_response({"status": "ERROR", "detail": "Not found"}, 404)
