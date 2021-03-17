@@ -140,10 +140,53 @@ def flask_response(data, code=200):
     return resp
 
 '''
+Authenticate request based on path, method and user
+'''
+def auth_request(path, method, user):
+    global config
+
+    # Deny anonymous access
+    if user in ["", None]:
+        return False
+
+    # Allow anyone to access status page
+    if path == "/":
+        return True
+
+    # Deny users not in config file
+    if user not in [config["auth_user_web"], config["auth_user_bastion"]]:
+        return False
+
+    # Handle bogus paths
+    m = re.match(r'^/v[0-9]+/([a-z]+)/[a-z0-9]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?', path)
+    if not m:
+        return False
+
+    req_function = m.group(1)
+
+    permissions = {
+        config["auth_user_web"]: [
+            ("ssh_keys", "GET"),
+            ("ssh_keys", "POST"),
+            ("vpn_keys", "GET"),
+            ("vpn_keys", "POST"),
+            ("auth_attempts", "GET")
+            ("auth_attempts", "POST")
+        ],
+        config["auth_user_bastion"]: [
+            ("ssh_approved", "GET"),
+            ("vpn_approved", "GET")
+        ]
+    }
+
+    return (req_function, method) in permissions[user]
+
+'''
 End of functions library
 '''
 
-API_VERSION = "1"
+# Must be integer
+API_VERSION = 1
 
 config = {}
 cnx = None
@@ -160,9 +203,12 @@ Initalise and authenticate
 '''
 @app.before_request
 def api_before_request():
-    begin()
+    if not begin():
+        return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
 
-#    if request.path.startswith('')
+    if not auth_request(request.path, request.method, request.remote_user):
+        return flask_response({"status": "ERROR", "detail": "Access denied"}, 403)
+
 
 '''
 Status if nothing requested - also used for monitoring
