@@ -245,6 +245,6 @@ Return a list of user's SSH public keys
 Close DB connections etc.
 '''
 @app.after_request
-def api_after_request():
+def api_after_request(response):
     global cnx
     cnx.close()
