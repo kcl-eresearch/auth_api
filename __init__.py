@@ -4,6 +4,7 @@ import ldap
 import mysql.connector
 import os
 import re
+import socket
 import sys
 import syslog
 import yaml
@@ -172,4 +173,4 @@ def route_root():
 
         table_counts[table] = result[0]["table_count"]
 
-    return flask_response({"status": "OK", "table_counts": table_counts})
+    return flask_response({"status": "OK", "table_counts": table_counts, "host": socket.getfqdn()})
