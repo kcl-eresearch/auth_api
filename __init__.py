@@ -151,12 +151,18 @@ ldapc = None
 
 app = flask.Flask(__name__)
 
-if not begin():
-    return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
-
 '''
 Flask URI routing
 '''
+
+'''
+Initalise and authenticate
+'''
+@app.before_request
+def api_before_request():
+    begin()
+
+#    if request.path.startswith('')
 
 '''
 Status if nothing requested - also used for monitoring
