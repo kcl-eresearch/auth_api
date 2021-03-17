@@ -153,7 +153,8 @@ def auth_request(path, method, user):
     if path == "/":
         return True
 
-    sys.stderr.write(config.keys())
+    for k in config.keys():
+        sys.stderr.write("%s: %s\n" % (k, config[k]))
 
     # Deny users not in config file
     if user not in [config["auth_user_web"], config["auth_user_bastion"]]:
