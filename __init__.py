@@ -161,6 +161,6 @@ def route_root():
         result = cursor.fetchall()
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of users table): {e}")
-        return flask_response({"status": "ERROR", "detail": "Failed getting user count"}, 500)
+        return flask_response({"status": "ERROR", "detail": f"Failed getting user count: {e}"}, 500)
 
     return flask_response({"status": "OK", "user_count": result[0]["user_count"]})
