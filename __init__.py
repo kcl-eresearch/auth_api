@@ -34,7 +34,7 @@ def begin(config_dir="/etc/auth_api"):
 '''
 Initialise LDAP connection
 '''
-def init_ldap(self):
+def init_ldap():
     global config, ldapc
     try:
         ldap.set_option(ldap.OPT_NETWORK_TIMEOUT, 10)
