@@ -58,7 +58,6 @@ def get_ldap_user(username):
     if len(result) != 2:
         return {}
 
-    print(result)
     return result[1][0][1]
 
 '''
@@ -91,7 +90,7 @@ def get_user_id(username):
 
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("INSERT INTO users(username, display_name, email) VALUES(%s, %s, %s)", (username, TBC, TBC))
+        cursor.execute("INSERT INTO users(username, display_name, email) VALUES(%s, %s, %s)", (username, ldap_user["displayName"], ldap_user["mail"]))
         cursor.commit()
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
