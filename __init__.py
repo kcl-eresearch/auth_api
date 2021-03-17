@@ -143,11 +143,16 @@ def flask_response(data, code=200):
 End of functions library
 '''
 
+API_VERSION = "1"
+
 config = {}
 cnx = None
 ldapc = None
 
 app = flask.Flask(__name__)
+
+if not begin():
+    return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
 
 '''
 Flask URI routing
@@ -157,10 +162,7 @@ Flask URI routing
 Status if nothing requested - also used for monitoring
 '''
 @app.route('/')
-def route_root():
-    if not begin():
-        return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
-
+def api_status():
     table_counts = {}
     for table in ['users', 'mfa_requests', 'ssh_keys', 'vpn_certs']:
         try:
@@ -173,4 +175,10 @@ def route_root():
 
         table_counts[table] = result[0]["table_count"]
 
-    return flask_response({"status": "OK", "table_counts": table_counts, "host": socket.getfqdn()})
+    return flask_response({"status": "OK", "table_counts": table_counts, "host": socket.getfqdn(), "version": API_VERSION})
+
+'''
+Return a list of user's SSH public keys
+'''
+#@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
+#def api_get_ssh_keys(username):
