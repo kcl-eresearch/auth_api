@@ -13,6 +13,7 @@ Open config and connect to database
 '''
 
 def begin(config_dir="/etc/auth_api"):
+    global cnx, config
     for file in ["main", "ca", "db", "ldap"]:
         config_file = f"{config_dir}/{file}.yaml"
         try:
@@ -34,6 +35,7 @@ def begin(config_dir="/etc/auth_api"):
 Initialise LDAP connection
 '''
 def init_ldap(self):
+    global config, ldapc
     try:
         ldap.set_option(ldap.OPT_NETWORK_TIMEOUT, 10)
         ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, config["ldap"]["ca_file"])
@@ -51,6 +53,7 @@ def init_ldap(self):
 Get a user's details from LDAP
 '''
 def get_ldap_user(username):
+    global ldapc
     result = ldapc.result(ldapc.search(config["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)({config['ldap']['attr_username']}={username}))", [config["ldap"]["attr_email"], config["ldap"]["attr_display_name"]]))
     if len(result) != 2:
         return {}
@@ -61,6 +64,7 @@ def get_ldap_user(username):
 Get ID from database of relevant user - creating new entry if required
 '''
 def get_user_id(username):
+    global cnx
     try:
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
@@ -104,6 +108,7 @@ def get_user_id(username):
 Get a user's SSH keys
 '''
 def get_user_ssh_keys(username):
+    global cnx
     user_id = get_user_id(username)
     if not user_id:
         return False
