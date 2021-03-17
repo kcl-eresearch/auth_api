@@ -90,7 +90,7 @@ def get_user_id(username):
 
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("INSERT INTO users(username, display_name, email) VALUES(%s, %s, %s)", (username, ldap_user["displayName"][0], ldap_user["mail"][0]))
+        cursor.execute("INSERT INTO users(username, display_name, email, created_at) VALUES(%s, %s, %s, NOW())", (username, ldap_user["displayName"][0], ldap_user["mail"][0]))
         cnx.commit()
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
