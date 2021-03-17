@@ -160,12 +160,16 @@ def route_root():
     if not begin():
         return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
 
-    try:
-        cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT COUNT(*) AS user_count FROM users")
-        result = cursor.fetchall()
-    except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of users table): {e}")
-        return flask_response({"status": "ERROR", "detail": f"Failed getting user count: {e}"}, 500)
+    table_counts = {}
+    for table in ['users', 'mfa_requests', 'ssh_keys', 'vpn_certs']:
+        try:
+            cursor = cnx.cursor(dictionary=True)
+            cursor.execute(f"SELECT COUNT(*) AS table_count FROM {table}")
+            result = cursor.fetchall()
+        except Exception as e:
+            syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of {table} table): {e}")
+            return flask_response({"status": "ERROR", "detail": f"Failed getting {table} count: {e}"}, 500)
 
-    return flask_response({"status": "OK", "user_count": result[0]["user_count"]})
+        table_counts[table] = result[0]["table_count"]
+
+    return flask_response({"status": "OK", "table_counts": table_counts})
