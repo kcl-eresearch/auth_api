@@ -240,12 +240,3 @@ Return a list of user's SSH public keys
 '''
 #@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
 #def api_get_ssh_keys(username):
-
-'''
-Close DB connections etc.
-'''
-@app.after_request
-def api_after_request(response):
-    global cnx
-    if cnx != None:
-        cnx.close()
