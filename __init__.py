@@ -6,7 +6,6 @@ import os
 import re
 import socket
 import sys
-import syslog
 import yaml
 
 '''
@@ -21,13 +20,13 @@ def begin(config_dir="/etc/auth_api"):
             with open(config_file) as fh:
                 config[file] = yaml.safe_load(fh)
         except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, f"Failed loading {config_file}: {e}")
+            sys.stderr.write(f"Failed loading {config_file}: {e}\n")
             return False
 
     try:
         cnx = mysql.connector.connect(host=config["db"]["host"], user=config["db"]["user"], password=config["db"]["password"], database=config["db"]["database"])
     except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, f"Failed connecting to database: {e}")
+        sys.stderr.write(f"Failed connecting to database: {e}\n")
         return False
 
     return True
@@ -45,7 +44,7 @@ def init_ldap(self):
         ldapc.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
         ldapc.simple_bind_s(config["ldap"]["username"], config["ldap"]["password"])
     except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, f"Failed connecting to LDAP: {e}")
+        sys.stderr.write(f"Failed connecting to LDAP: {e}\n")
         return False
 
     return True
@@ -71,7 +70,7 @@ def get_user_id(username):
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
     except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, f"Querying database for user failed: {e}")
+        sys.stderr.write(f"Querying database for user failed: {e}\n")
         return False
 
     if len(result) == 1:
@@ -83,7 +82,7 @@ def get_user_id(username):
 
         ldap_user = get_ldap_user(username)
     except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, f"Querying LDAP for user failed: {e}")
+        sys.stderr.write(f"Querying LDAP for user failed: {e}\n")
         return False
 
     if ldap_user == {}:
@@ -96,13 +95,13 @@ def get_user_id(username):
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
     except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, f"Adding new user to database failed: {e}")
+        sys.stderr.write(f"Adding new user to database failed: {e}\n")
         return False
 
     if len(result) == 1:
         return result[0]["id"]
 
-    syslog.syslog(syslog.LOG_ERR, "Could not find new user in database")
+    sys.stderr.write("Could not find new user in database\n")
     return False
 
 '''
@@ -119,7 +118,7 @@ def get_user_ssh_keys(username):
         cursor.execute("SELECT type, pub_key FROM ssh_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, f"Error getting ssh keys for {username}: {e}")
+        sys.stderr.write(f"Error getting ssh keys for {username}: {e}\n")
         return False
 
     return result
@@ -160,7 +159,7 @@ def auth_request(path, method, user):
         return False
 
     # Handle bogus paths
-    m = re.match(r'^/v[0-9]+/([a-z]+)/[a-z0-9]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?', path)
+    m = re.match(r'^/v[0-9]+/([a-z_]+)/[a-z0-9]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?', path)
     if not m:
         sys.stderr.write("Access denied: invalid API path\n")
         return False
@@ -228,7 +227,7 @@ def api_status():
             cursor.execute(f"SELECT COUNT(*) AS table_count FROM {table}")
             result = cursor.fetchall()
         except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, f"Error getting status (count of {table} table): {e}")
+            sys.stderr.write(f"Error getting status (count of {table} table): {e}\n")
             return flask_response({"status": "ERROR", "detail": f"Failed getting {table} count: {e}"}, 500)
 
         table_counts[table] = result[0]["table_count"]
