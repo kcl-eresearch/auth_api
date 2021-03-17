@@ -170,7 +170,7 @@ def auth_request(path, method, user):
             ("ssh_keys", "POST"),
             ("vpn_keys", "GET"),
             ("vpn_keys", "POST"),
-            ("auth_attempts", "GET")
+            ("auth_attempts", "GET"),
             ("auth_attempts", "POST")
         ],
         config["auth_user_bastion"]: [
@@ -206,7 +206,7 @@ def api_before_request():
     if not begin():
         return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
 
-    if not auth_request(request.path, request.method, request.remote_user):
+    if not auth_request(flask.request.path, flask.request.method, flask.request.remote_user):
         return flask_response({"status": "ERROR", "detail": "Access denied"}, 403)
 
 
