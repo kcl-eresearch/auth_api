@@ -247,4 +247,5 @@ Close DB connections etc.
 @app.after_request
 def api_after_request(response):
     global cnx
-    cnx.close()
+    if cnx != None:
+        cnx.close()
