@@ -58,8 +58,8 @@ def get_ldap_user(username):
     if len(result) != 2:
         return {}
 
-    sys.stderr.write(type(result[0]))
-    sys.stderr.write(type(result[1]))
+    sys.stderr.write(str(type(result[0])))
+    sys.stderr.write(str(type(result[1])))
     return result[1][0][1]
 
 '''
