@@ -237,9 +237,17 @@ def api_status():
 '''
 Return a list of user's SSH public keys
 '''
-#@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
-#def api_get_ssh_keys(username):
+@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
+def api_get_ssh_keys(username):
+    keys = get_user_ssh_keys(username)
+    if not keys:
+        return flask_response({"status": "ERROR", "detail": "Key retrieval failed"}, 500)
 
+    return flask_response({"status": "OK", "keys": keys})
+
+'''
+Handle 404s (though normally should get permissions error first)
+'''
 @app.errorhandler(404)
 def api_not_found(e):
     return flask_response({"status": "ERROR", "detail": "Not found"}, 404)
