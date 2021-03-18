@@ -98,6 +98,8 @@ def get_user_id(username):
         sys.stderr.write(f"Adding new user to database failed: {e}\n")
         return False
 
+    sys.stderr.write("got here")
+
     if len(result) == 1:
         return result[0]["id"]
 
