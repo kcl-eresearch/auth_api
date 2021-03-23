@@ -5,7 +5,11 @@ import mysql.connector
 import os
 import re
 import socket
+import sshpubkeys
+import subprocess
 import sys
+import tempfile
+import uuid
 import yaml
 
 '''
@@ -55,7 +59,7 @@ Get a user's details from LDAP
 def get_ldap_user(username):
     global ldapc
     result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)({config['ldap']['attr_username']}={username}))", [config["ldap"]["attr_email"], config["ldap"]["attr_display_name"]]))
-    if len(result) != 2:
+    if result[1] == []:
         return {}
 
     return result[1][0][1]
@@ -97,8 +101,6 @@ def get_user_id(username):
     except Exception as e:
         sys.stderr.write(f"Adding new user to database failed: {e}\n")
         return False
-
-    sys.stderr.write("got here")
 
     if len(result) == 1:
         return result[0]["id"]
@@ -242,10 +244,41 @@ Return a list of user's SSH public keys
 @app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
 def api_get_ssh_keys(username):
     keys = get_user_ssh_keys(username)
-    if not keys:
+    if keys == False:
         return flask_response({"status": "ERROR", "detail": "Key retrieval failed"}, 500)
 
     return flask_response({"status": "OK", "keys": keys})
+
+'''
+Create new OpenVPN key/certificate
+'''
+@app.route(f"/v{API_VERSION}/vpn_keys/<username>/<key_name>", methods=["GET"])
+def api_set_vpn_key(username, key_name):
+    user_id = get_user_id(username)
+    if not user_id:
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+
+    cert_uuid = str(uuid.uuid1())
+    tempdir = tempfile.mkdtemp(prefix="vpn_key_")
+    path_crt = f"{tempdir}/{cert_uuid}.crt"
+    path_key = f"{tempdir}/{cert_uuid}.key"
+
+    try:
+        output = subprocess.check_output([config["ca"]["exe"], "ca", "certificate", "--provisioner", config["ca"]["provisioner"], "--provisioner-password-file", "/etc/auth_api/ca_password.txt", "--ca-url", config["ca"]["url"], "--root", config["ca"]["root_crt"], "--not-after", "%dh" % (24 * config["ca"]["cert_lifetime"]), cert_uuid, path_crt, path_key], stderr=subprocess.STDOUT)
+    except Exception as e:
+        sys.stderr.write(f"Failed generating VPN key/certificate: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500)
+
+    try:
+        with open(path_crt) as fh:
+            data_crt = fh.read()
+        with open(path_key) as fh:
+            data_key = fh.read()
+    except Exception as e:
+        sys.stderr.write(f"Failed reading new VPN key/certificate: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "VPN key/certificate read failed"}, 500)
+
+    return flask_response({"status": "OK", "crt": data_crt, "key": data_key})
 
 '''
 Handle 404s (though normally should get permissions error first)
