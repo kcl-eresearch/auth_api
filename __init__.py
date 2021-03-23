@@ -1,9 +1,12 @@
+from cryptography.hazmat.backends import default_backend
+from cryptography import x509
 import flask
 import json
 import ldap
 import mysql.connector
 import os
 import re
+import shutil
 import socket
 import sshpubkeys
 import subprocess
@@ -278,6 +281,21 @@ def api_set_vpn_key(username, key_name):
         sys.stderr.write(f"Failed reading new VPN key/certificate: {e}\n")
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate read failed"}, 500)
 
+    try:
+        cert = x509.load_pem_x509_certificate(cert.encode('utf8'), default_backend())
+    except Exception as e:
+        sys.stderr.write(f"Failed decoding new certificate: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "VPN key/certificate decode failed"}, 500)
+
+    try:
+        cursor = cnx.cursor()
+        cursor.execute("INSERT INTO vpn_certs(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, %s)", (cert.not_valid_before, cert.not_valid_after, user_id, cert_uuid, key_name, data_crt, 'active'))
+        cnx.commit()
+    except Exception as e:
+        sys.stderr.write(f"Failed storing certificate in database: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "VPN key/certificate database storage failed"}, 500)
+
+    shutil.rmtree(tempdir)
     return flask_response({"status": "OK", "crt": data_crt, "key": data_key})
 
 '''
