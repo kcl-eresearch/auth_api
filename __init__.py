@@ -357,7 +357,7 @@ def api_set_vpn_key(username, key_name):
 Set a user's SSH keys
 '''
 @app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["POST"])
-def api_set_user_ssh_keys(username, ssh_keys):
+def api_set_user_ssh_keys(username):
     global config
 
     user_id = get_user_id(username)
@@ -372,6 +372,7 @@ def api_set_user_ssh_keys(username, ssh_keys):
     for key in existing:
         existing_named[key["name"]] = existing
 
+    ssh_keys = request.json
     if not isinstance(ssh_keys, dict):
         return flask_response({"status": "ERROR", "detail": "Invalid key list"}, 400)
 
