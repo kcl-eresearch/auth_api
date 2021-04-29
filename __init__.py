@@ -166,15 +166,18 @@ def flask_response(data, code=200):
     return resp
 
 '''
-Make dict serializable - convert datetimes to unix timestamps
+Make list of dicts serializable - convert datetimes to unix timestamps
 '''
 def make_serializable(data):
-    output = {}
-    for k, v in data.items():
-        if isinstance(v, datetime.datetime):
-            output[k] = v.timestamp()
+    output = []
+    for datum in data:
+        my_output = {}
+        for k, v in datum.items():
+            if isinstance(v, datetime.datetime):
+                my_output[k] = v.timestamp()
         else:
-            output[k] = v
+            my_output[k] = v
+        output.append(my_output)
     return output
 
 '''
