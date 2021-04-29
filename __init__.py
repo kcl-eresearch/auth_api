@@ -366,7 +366,7 @@ def api_set_user_ssh_keys(username):
 
     existing = get_user_ssh_keys(username)
     if not existing:
-        return False
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
 
     existing_named = {}
     for key in existing:
