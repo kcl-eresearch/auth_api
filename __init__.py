@@ -255,7 +255,7 @@ def api_get_ssh_keys(username):
 '''
 Create new OpenVPN key/certificate
 '''
-@app.route(f"/v{API_VERSION}/vpn_keys/<username>/<key_name>", methods=["GET"])
+@app.route(f"/v{API_VERSION}/vpn_keys/<username>/<key_name>", methods=["POST"])
 def api_set_vpn_key(username, key_name):
     user_id = get_user_id(username)
     if not user_id:
