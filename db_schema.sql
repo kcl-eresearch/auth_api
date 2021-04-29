@@ -25,7 +25,7 @@ CREATE TABLE `mfa_requests` (
   CONSTRAINT `mfa_requests_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `vpn_certs` (
+CREATE TABLE `vpn_keys` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` timestamp NULL DEFAULT NULL,
   `expires_at` timestamp NULL DEFAULT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE `vpn_certs` (
   `public_cert` text COLLATE ascii_general_ci NOT NULL,
   `status` enum('active','revoked') COLLATE ascii_general_ci NOT NULL DEFAULT 'active',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `vpn_certs_uuid_unique` (`uuid`),
+  UNIQUE KEY `vpn_keys_uuid_unique` (`uuid`),
   KEY `vpn_device_user_id_status_index` (`user_id`,`status`),
   CONSTRAINT `vpn_device_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
