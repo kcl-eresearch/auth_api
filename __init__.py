@@ -398,7 +398,7 @@ def api_set_user_ssh_keys(username):
                 cursor.execute("DELETE FROM ssh_keys WHERE user_id = %s AND name = %s", (user_id, name))
                 cursor.execute("INSERT INTO ssh_keys(created_at, user_id, type, name, pub_key) VALUES(NOW(), %s, %s, %s, %s)", (user_id, key["type"], name, key["pub_key"]))
 
-        for name, data in existing_name.items():
+        for name, data in existing_named.items():
             if name not in ssh_keys:
                 cursor.execute("DELETE FROM ssh_keys WHERE user_id = %s AND name = %s", (user_id, name))
 
