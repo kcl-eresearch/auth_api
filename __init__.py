@@ -289,6 +289,7 @@ def api_set_vpn_key(username, key_name):
 
     try:
         cursor = cnx.cursor()
+        cursor.execute("UPDATE vpn_certs SET status = 'revoked' WHERE user_id = %s AND name = %s", (user_id, key_name))
         cursor.execute("INSERT INTO vpn_certs(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, %s)", (cert.not_valid_before, cert.not_valid_after, user_id, cert_uuid, key_name, data_crt, 'active'))
         cnx.commit()
     except Exception as e:
