@@ -141,7 +141,7 @@ def get_user_vpn_keys(username):
 
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT created_at, expires_at, uuid, name, public_cert, status FROM vpn_keys WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT created_at, expires_at, uuid, name, public_cert, status FROM vpn_certs WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception as e:
         sys.stderr.write(f"Error getting VPN certs for {username}: {e}\n")
