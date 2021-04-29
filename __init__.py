@@ -184,6 +184,38 @@ def validate_ssh_key(type, pub_key, name):
     return True
 
 '''
+Revoke a VPN key
+'''
+def revoke_vpn_key(username, key_name):
+    try:
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT id, public_cert FROM vpn_keys WHERE status = 'active' AND user_id = %s AND name = %s", (user_id, key_name))
+        result = cursor.fetchall()
+    except Exception as e:
+        sys.stderr.write(f"Failed getting data for user {username} certificate {key_name}: {e}\n")
+        return False
+
+    try:
+        for certificate in result:
+            cursor.execute("UPDATE vpn_keys SET status = 'revoked' WHERE id = %s", (certificate["id"]))
+            cert_data = x509.load_pem_x509_certificate(certificate["public_cert"].encode("utf8"), default_backend())
+            serial_number = str(cert_data.serial_number)
+            token = subprocess.check_output([config["ca"]["exe"], "ca", "token", "--provisioner", config["ca"]["provisioner"], "--password-file", "/etc/auth_api/ca_password.txt", "--ca-url", config["ca"]["url"], "--root", config["ca"]["root_crt"], "--revoke", serial_number]).strip()
+            output = subprocess.check_output([config["ca"]["exe", "ca", "revoke", serial_number, "--token", token]])
+        cnx.commit()
+    except Exception as e:
+        sys.stderr.write(f"Failed setting revocation status in database for user {username} certificate {key_name}: {e}\n")
+        return False
+
+    try:
+        output = subprocess.check_output([config["ca"]["exe"], "ca", "revoke", serial, stderr=subprocess.STDOUT)
+    except Exception as e:
+        sys.stderr.write(f"CA failed to revoke certificate {serial} for user {username} certificate {key_name}: {e}\n)
+        return False
+
+    return True
+
+'''
 Authenticate request based on path, method and user
 '''
 def auth_request(path, method, user):
@@ -217,6 +249,7 @@ def auth_request(path, method, user):
             ("ssh_keys", "PUT"),
             ("vpn_keys", "GET"),
             ("vpn_keys", "POST"),
+            ("vpn_keys", "DELETE"),
             ("auth_attempts", "GET"),
             ("auth_attempts", "POST")
         ],
@@ -340,9 +373,11 @@ def api_set_vpn_key(username, key_name):
         sys.stderr.write(f"Failed decoding new certificate: {e}\n")
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate decode failed"}, 500)
 
+    if not revoke_vpn_key(username, key_name):
+        return flask_response({"status": "ERROR", "detail": "Old VPN key/certificate revocation failed"}, 500)
+
     try:
         cursor = cnx.cursor()
-        cursor.execute("UPDATE vpn_keys SET status = 'revoked' WHERE user_id = %s AND name = %s", (user_id, key_name))
         cursor.execute("INSERT INTO vpn_keys(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, 'active')", (cert.not_valid_before, cert.not_valid_after, user_id, cert_uuid, key_name, data_crt))
         cnx.commit()
     except Exception as e:
@@ -352,6 +387,19 @@ def api_set_vpn_key(username, key_name):
     shutil.rmtree(tempdir)
     return flask_response({"status": "OK", "public_cert": data_crt, "private_key": data_key, "created_at": int(cert.not_valid_before.timestamp()), "expires_at": int(cert.not_valid_after.timestamp()), "name": key_name, "status": "active", "uuid": cert_uuid})
 
+'''
+Revoke an OpenVPN key/certificate
+'''
+@app.route(f"/v{API_VERSION}/vpn_keys/<username>/<key_name>", methods=["DELETE"])
+def api_revoke_vpn_key(username, key_name):
+    user_id = get_user_id(username)
+    if not user_id:
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+
+    if not revoke_vpn_key(username, key_name):
+        return flask_response({"status": "ERROR", "detail": "Revocation failed"}, 500)
+
+    return api_get_vpn_keys(username)
 
 '''
 Set a user's SSH keys
@@ -386,7 +434,6 @@ def api_set_user_ssh_keys(username):
 
             if "type" not in key or key["type"] not in config["main"]["ssh_key_types"]:
                 return flask_response({"status": "ERROR", "detail": "Invalid key type"}, 400)
-
 
             if "pub_key" not in key:
                 return flask_response({"status": "ERROR", "detail": "Invalid key data"}, 400)
