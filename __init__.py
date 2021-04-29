@@ -123,7 +123,7 @@ def get_user_ssh_keys(username):
 
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT created_at, type, pub_key FROM ssh_keys WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT created_at, name, type, pub_key FROM ssh_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception as e:
         sys.stderr.write(f"Error getting ssh keys for {username}: {e}\n")
@@ -151,14 +151,6 @@ def get_user_vpn_keys(username):
     return result
 
 '''
-Set a user's SSH keys
-'''
-def set_user_ssh_keys(username, ssh_keys):
-    existing = get_user_ssh_keys(username)
-    if not existing:
-        return False
-
-'''
 Encode response as JSON and return it via Flask
 '''
 def flask_response(data, code=200):
@@ -179,6 +171,17 @@ def make_serializable(data):
                 my_output[k] = v
         output.append(my_output)
     return output
+
+'''
+Validate SSH public key
+'''
+def validate_ssh_key(type, pub_key, name):
+    ssh_key = sshpubkeys.SSHKey(f"{type} {pub_key} {name}")
+    try:
+        ssh_key.parse()
+    except Exception as e:
+        return False
+    return True
 
 '''
 Authenticate request based on path, method and user
@@ -348,6 +351,63 @@ def api_set_vpn_key(username, key_name):
 
     shutil.rmtree(tempdir)
     return flask_response({"status": "OK", "public_cert": data_crt, "private_key": data_key, "created_at": int(cert.not_valid_before.timestamp()), "expires_at": int(cert.not_valid_after.timestamp()), "name": key_name, "status": "active", "uuid": cert_uuid})
+
+
+'''
+Set a user's SSH keys
+'''
+@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["POST"])
+def api_set_user_ssh_keys(username, ssh_keys):
+    global config
+
+    user_id = get_user_id(username)
+    if not user_id:
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+
+    existing = get_user_ssh_keys(username)
+    if not existing:
+        return False
+
+    existing_named = {}
+    for key in existing:
+        existing_named[key["name"]] = existing
+
+    if not isinstance(ssh_keys, dict):
+        return flask_response({"status": "ERROR", "detail": "Invalid key list"}, 400)
+
+    queries = []
+
+    try:
+        cursor = cnx.cursor()
+        for name, key in ssh_keys.items():
+            if name == "" or not isinstance(name, str):
+                return flask_response({"status": "ERROR", "detail": "Invalid key name"}, 400)
+
+            if "type" not in key or key["type"] not in config["main"]["ssh_key_types"]:
+                return flask_response({"status": "ERROR", "detail": "Invalid key type"}, 400)
+
+
+            if "pub_key" not in key:
+                return flask_response({"status": "ERROR", "detail": "Invalid key data"}, 400)
+
+            if not validate_ssh_key(key["type"], key["pub_key"], name):
+                return flask_response({"status": "ERROR", "detail": "Invalid key data"}, 400)
+
+            if name not in existing_named or existing_named[name]["type"] != key["type"] or existing_named[name]["pub_key"] != key["pub_key"]:
+                cursor.execute("DELETE FROM ssh_keys WHERE user_id = %s AND name = %s", (user_id, name))
+                cursor.execute("INSERT INTO ssh_keys(created_at, user_id, type, name, pub_key) VALUES(NOW(), %s, %s, %s, %s)", (user_id, key["type"], name, key["pub_key"]))
+
+        for name, data in existing_name.items():
+            if name not in ssh_keys:
+                cursor.execute("DELETE FROM ssh_keys WHERE user_id = %s AND name = %s", (user_id, name))
+
+        cnx.commit()
+
+    except Exception as e:
+        sys.stderr.write(f"Failed saving SSH keys: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "Failed saving SSH keys"}, 500)
+
+    return api_get_ssh_keys(username)
 
 '''
 Handle 404s (though normally should get permissions error first)

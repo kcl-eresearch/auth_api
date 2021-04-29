@@ -45,6 +45,7 @@ CREATE TABLE `ssh_keys` (
   `created_at` timestamp NULL DEFAULT NULL,
   `user_id` bigint unsigned NOT NULL,
   `type` varchar(255) COLLATE ascii_general_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `pub_key` varchar(1024) COLLATE ascii_general_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ssh_keys_pub_key_unique` (`pub_key`),
