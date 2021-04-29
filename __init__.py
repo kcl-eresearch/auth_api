@@ -214,7 +214,7 @@ def auth_request(path, method, user):
     permissions = {
         config["main"]["auth_user_web"]: [
             ("ssh_keys", "GET"),
-            ("ssh_keys", "POST"),
+            ("ssh_keys", "PUT"),
             ("vpn_keys", "GET"),
             ("vpn_keys", "POST"),
             ("auth_attempts", "GET"),
@@ -356,7 +356,7 @@ def api_set_vpn_key(username, key_name):
 '''
 Set a user's SSH keys
 '''
-@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["POST"])
+@app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["PUT"])
 def api_set_user_ssh_keys(username):
     global config
 
