@@ -320,7 +320,7 @@ def api_set_vpn_key(username, key_name):
 
     try:
         with open(path_crt) as fh:
-            data_crt = ""
+            data_crt = line = ""
             while line != "-----END CERTIFICATE-----\n":
                 line = fh.readline()
                 data_crt += line
