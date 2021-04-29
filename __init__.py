@@ -1,5 +1,6 @@
 from cryptography.hazmat.backends import default_backend
 from cryptography import x509
+import datetime
 import flask
 import json
 import ldap
@@ -165,6 +166,18 @@ def flask_response(data, code=200):
     return resp
 
 '''
+Make dict serializable - convert datetimes to unix timestamps
+'''
+def make_serializable(data):
+    output = {}
+    for k, v in data.items():
+        if isinstance(v, datetime.datetime):
+            output[k] = v.timestamp()
+        else:
+            output[k] = v
+    return output
+
+'''
 Authenticate request based on path, method and user
 '''
 def auth_request(path, method, user):
@@ -269,7 +282,7 @@ def api_get_ssh_keys(username):
     if keys == False:
         return flask_response({"status": "ERROR", "detail": "SSH key retrieval failed"}, 500)
 
-    return flask_response({"status": "OK", "keys": keys})
+    return flask_response({"status": "OK", "keys": make_serializable(keys)})
 
 '''
 Return a list of user's VPN keys
@@ -280,7 +293,7 @@ def api_get_vpn_keys(username):
     if keys == False:
         return flask_response({"status": "ERROR", "detail": "VPN key retrieval failed"}, 500)
 
-    return flask_response({"status": "OK", "keys": keys})
+    return flask_response({"status": "OK", "keys": make_serializable(keys)})
 
 '''
 Create new OpenVPN key/certificate
