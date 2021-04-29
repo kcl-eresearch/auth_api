@@ -205,7 +205,7 @@ def revoke_vpn_key(username, key_name):
             cert_data = x509.load_pem_x509_certificate(certificate["public_cert"].encode("utf8"), default_backend())
             serial_number = str(cert_data.serial_number)
             token = subprocess.check_output([config["ca"]["exe"], "ca", "token", "--provisioner", config["ca"]["provisioner"], "--password-file", "/etc/auth_api/ca_password.txt", "--ca-url", config["ca"]["url"], "--root", config["ca"]["root_crt"], "--revoke", serial_number]).strip()
-            output = subprocess.check_output([config["ca"]["exe", "ca", "revoke", serial_number, "--token", token]])
+            output = subprocess.check_output([config["ca"]["exe"], "ca", "revoke", serial_number, "--token", token])
         cnx.commit()
     except Exception as e:
         sys.stderr.write(f"Failed setting revocation status in database for user {username} certificate {key_name}: {e}\n")
