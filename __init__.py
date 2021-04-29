@@ -187,6 +187,10 @@ def validate_ssh_key(type, pub_key, name):
 Revoke a VPN key
 '''
 def revoke_vpn_key(username, key_name):
+    user_id = get_user_id(username)
+    if not user_id:
+        return False
+
     try:
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT id, public_cert FROM vpn_keys WHERE status = 'active' AND user_id = %s AND name = %s", (user_id, key_name))
