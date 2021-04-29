@@ -174,9 +174,9 @@ def make_serializable(data):
         my_output = {}
         for k, v in datum.items():
             if isinstance(v, datetime.datetime):
-                my_output[k] = v.timestamp()
-        else:
-            my_output[k] = v
+                my_output[k] = int(v.timestamp())
+            else:
+                my_output[k] = v
         output.append(my_output)
     return output
 
