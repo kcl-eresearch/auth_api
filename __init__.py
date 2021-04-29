@@ -133,7 +133,7 @@ def get_user_ssh_keys(username):
 '''
 Get a user's VPN certs from database
 '''
-def get_user_vpn_certs(username):
+def get_user_vpn_keys(username):
     global cnx
     user_id = get_user_id(username)
     if not user_id:
@@ -141,7 +141,7 @@ def get_user_vpn_certs(username):
 
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT created_at, expires_at, uuid, name, public_cert, status FROM vpn_certs WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT created_at, expires_at, uuid, name, public_cert, status FROM vpn_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception as e:
         sys.stderr.write(f"Error getting VPN certs for {username}: {e}\n")
@@ -247,7 +247,7 @@ Status if nothing requested - also used for monitoring
 @app.route('/')
 def api_status():
     table_counts = {}
-    for table in ['users', 'mfa_requests', 'ssh_keys', 'vpn_certs']:
+    for table in ['users', 'mfa_requests', 'ssh_keys', 'vpn_keys']:
         try:
             cursor = cnx.cursor(dictionary=True)
             cursor.execute(f"SELECT COUNT(*) AS table_count FROM {table}")
@@ -267,18 +267,18 @@ Return a list of user's SSH public keys
 def api_get_ssh_keys(username):
     keys = get_user_ssh_keys(username)
     if keys == False:
-        return flask_response({"status": "ERROR", "detail": "Key retrieval failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "SSH key retrieval failed"}, 500)
 
     return flask_response({"status": "OK", "keys": keys})
 
 '''
-Return a list of user's VPN certificates
+Return a list of user's VPN keys
 '''
 @app.route(f"/v{API_VERSION}/vpn_keys/<username>", methods=["GET"])
-def api_get_vpn_certs(username):
-    certs = get_user_vpn_certs(username)
+def api_get_vpn_keys(username):
+    keys = get_user_vpn_keys(username)
     if keys == False:
-        return flask_response({"status": "ERROR", "detail": "Certificate retrieval failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "VPN key retrieval failed"}, 500)
 
     return flask_response({"status": "OK", "keys": keys})
 
@@ -319,8 +319,8 @@ def api_set_vpn_key(username, key_name):
 
     try:
         cursor = cnx.cursor()
-        cursor.execute("UPDATE vpn_certs SET status = 'revoked' WHERE user_id = %s AND name = %s", (user_id, key_name))
-        cursor.execute("INSERT INTO vpn_certs(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, 'active')", (cert.not_valid_before, cert.not_valid_after, user_id, cert_uuid, key_name, data_crt))
+        cursor.execute("UPDATE vpn_keys SET status = 'revoked' WHERE user_id = %s AND name = %s", (user_id, key_name))
+        cursor.execute("INSERT INTO vpn_keys(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, 'active')", (cert.not_valid_before, cert.not_valid_after, user_id, cert_uuid, key_name, data_crt))
         cnx.commit()
     except Exception as e:
         sys.stderr.write(f"Failed storing certificate in database: {e}\n")
