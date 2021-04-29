@@ -372,7 +372,7 @@ def api_set_user_ssh_keys(username):
     for key in existing:
         existing_named[key["name"]] = existing
 
-    ssh_keys = request.json
+    ssh_keys = flask.request.json
     if not isinstance(ssh_keys, dict):
         return flask_response({"status": "ERROR", "detail": "Invalid key list"}, 400)
 
