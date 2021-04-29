@@ -282,7 +282,7 @@ def api_set_vpn_key(username, key_name):
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate read failed"}, 500)
 
     try:
-        cert = x509.load_pem_x509_certificate(cert.encode('utf8'), default_backend())
+        cert = x509.load_pem_x509_certificate(data_crt.encode('utf8'), default_backend())
     except Exception as e:
         sys.stderr.write(f"Failed decoding new certificate: {e}\n")
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate decode failed"}, 500)
