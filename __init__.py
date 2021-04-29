@@ -347,7 +347,7 @@ def api_set_vpn_key(username, key_name):
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate database storage failed"}, 500)
 
     shutil.rmtree(tempdir)
-    return flask_response({"status": "OK", "crt": data_crt, "key": data_key})
+    return flask_response({"status": "OK", "crt": data_crt, "key": data_key, "created_at": cert.not_valid_before, "expires_at": cert.not_valid_after, "name": key_name, "status": "active", "uuid": cert_uuid})
 
 '''
 Handle 404s (though normally should get permissions error first)
