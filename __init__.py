@@ -207,12 +207,6 @@ def revoke_vpn_key(username, key_name):
         sys.stderr.write(f"Failed setting revocation status in database for user {username} certificate {key_name}: {e}\n")
         return False
 
-    try:
-        output = subprocess.check_output([config["ca"]["exe"], "ca", "revoke", serial, stderr=subprocess.STDOUT)
-    except Exception as e:
-        sys.stderr.write(f"CA failed to revoke certificate {serial} for user {username} certificate {key_name}: {e}\n)
-        return False
-
     return True
 
 '''
