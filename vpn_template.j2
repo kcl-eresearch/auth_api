@@ -1,0 +1,33 @@
+# KCL e-Research OpenVPN configuration example
+# Generated: 2021-01-01 00:00:00
+# Certificate: 0342527f-1234-5678-90ab-323aadb59483
+# Expires: 2021-02-01 00:00:00
+
+client
+port 1194
+proto udp
+dev tun
+remote bastion.example.com
+resolve-retry infinite
+nobind
+persist-key
+persist-tun
+auth-user-pass
+remote-cert-tls server
+verb 3
+compress lz4
+verify-x509-name bastion.example.com name
+dh none
+ca [inline]
+cert [inline]
+key [inline]
+
+<ca>
+{{ ca_cert }}
+</ca>
+<cert>
+{{ public_cert }}
+</cert>
+<key>
+{{ private_key }}
+</key>

@@ -2,6 +2,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography import x509
 import datetime
 import flask
+import jinja2
 import json
 import ldap
 import mysql.connector
@@ -377,6 +378,20 @@ def api_set_vpn_key(username, key_name):
     path_key = f"{tempdir}/{cert_uuid}.key"
 
     try:
+        with open("/etc/auth_api/vpn_template.j2") as fh:
+            vpn_template = jinja2.template(fh.read())
+    except Exception as e:
+        sys.stderr.write(f"Failed loading VPN config template: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500)
+
+    try:
+        with open(config["ca"]["root_crt"]) as fh:
+            ca_cert = fh.read()
+    except Exception as e:
+        sys.stderr.write(f"Failed loading CA cert: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500)
+
+    try:
         output = subprocess.check_output([config["ca"]["exe"], "ca", "certificate", "--provisioner", config["ca"]["provisioner"], "--provisioner-password-file", "/etc/auth_api/ca_password.txt", "--ca-url", config["ca"]["url"], "--root", config["ca"]["root_crt"], "--not-after", "%dh" % (24 * config["ca"]["cert_lifetime"]), cert_uuid, path_crt, path_key], stderr=subprocess.STDOUT)
     except Exception as e:
         sys.stderr.write(f"Failed generating VPN key/certificate: {e}\n")
@@ -413,7 +428,16 @@ def api_set_vpn_key(username, key_name):
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate database storage failed"}, 500)
 
     shutil.rmtree(tempdir)
-    return flask_response({"status": "OK", "public_cert": data_crt, "private_key": data_key, "created_at": int(cert.not_valid_before.timestamp()), "expires_at": int(cert.not_valid_after.timestamp()), "name": key_name, "status": "active", "uuid": cert_uuid})
+
+    vpn_config = vpn_template.render(
+        cert_uuid=cert_uuid,
+        cert_created=cert.not_valid_before.strtime("%Y-%m-%d %H:%M:%S"),
+        cert_expires=cert.not_valid_after.strtime("%Y-%m-%d %H:%M:%S"),
+        ca_cert=ca_cert,
+        public_cert=data_crt,
+        private_key=data_key
+    )
+    return flask_response({"status": "OK", "public_cert": data_crt, "private_key": data_key, "created_at": int(cert.not_valid_before.timestamp()), "expires_at": int(cert.not_valid_after.timestamp()), "name": key_name, "status": "active", "uuid": cert_uuid, "config": vpn_config})
 
 '''
 Revoke an OpenVPN key/certificate
