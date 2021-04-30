@@ -532,7 +532,7 @@ def api_set_mfa_request(username):
         return flask_response({"status": "ERROR", "detail": "Invalid MFA request - invalid status"}, 400)
 
     try:
-        cnx = cursor()
+        cursor = cnx.cursor()
         cursor.execute("UPDATE mfa_requests SET status = %s, updated_at = NOW(), expires_at = %s WHERE user_id = %s AND service = %s AND remote_ip = %s", (mfa_request["status"], datetime.datetime.now() + datetime.timedelta(days=config["main"]["mfa_valid_days"]), user_id, mfa_request["service"], mfa_request["ip_address"]))
         cnx.commit()
     except Exception as e:
