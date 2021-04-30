@@ -275,8 +275,8 @@ def auth_request(path, method, user):
             ("mfa_requests", "POST")
         ],
         config["main"]["auth_user_bastion"]: [
-            ("ssh_approved", "GET"),
-            ("vpn_approved", "GET")
+            ("ssh_auth", "GET"),
+            ("vpn_auth", "GET")
         ]
     }
 
@@ -501,12 +501,12 @@ def api_get_mfa_requests(username):
     if mfa_requests == False:
         return flask_response({"status": "ERROR", "detail": "MFA request retrieval failed"}, 500)
 
-    return flask_response({"status": "OK", "keys": make_serializable(mfa_requests)})
+    return flask_response({"status": "OK", "mfa_requests": make_serializable(mfa_requests)})
 
 '''
 Authenticate user VPN access
 '''
-@app.route(f"/v{API_VERSION}/mfa_requests/vpn/<username>/<ip_address>/<cert_cn>", methods=["GET"])
+@app.route(f"/v{API_VERSION}/vpn_auth/<username>/<ip_address>/<cert_cn>", methods=["GET"])
 def api_auth_vpn_access(username, ip_address, cert_cn):
     user_id = get_user_id(username)
     if not user_id:
@@ -547,7 +547,7 @@ def api_auth_vpn_access(username, ip_address, cert_cn):
 '''
 Authenticate user SSH access
 '''
-@app.route(f"/v{API_VERSION}/mfa_requests/ssh/<username>/<ip_address>", methods=["GET"])
+@app.route(f"/v{API_VERSION}/ssh_auth/<username>/<ip_address>", methods=["GET"])
 def api_auth_ssh_access(username, ip_address):
     user_id = get_user_id(username)
     if not user_id:
