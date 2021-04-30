@@ -214,6 +214,29 @@ def revoke_vpn_key(username, key_name):
     return True
 
 '''
+Get user MFA requests from database
+'''
+def get_mfa_requests(username, service="all"):
+    user_id = get_user_id(username)
+    if not user_id:
+        return False
+
+    requests = []
+    try:
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT id, created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s", (user_id,))
+        result = cursor.fetchall()
+    except Exception as e:
+        sys.stderr.write(f"Failed getting {service} MFA requests for {username}: {e}")
+        return False
+
+    for request in result:
+        if service == "all" or service == request["service"]:
+            requests.append(request)
+
+    return requests
+
+'''
 Authenticate request based on path, method and user
 '''
 def auth_request(path, method, user):
@@ -248,8 +271,8 @@ def auth_request(path, method, user):
             ("vpn_keys", "GET"),
             ("vpn_keys", "POST"),
             ("vpn_keys", "DELETE"),
-            ("auth_attempts", "GET"),
-            ("auth_attempts", "POST")
+            ("mfa_requests", "GET"),
+            ("mfa_requests", "POST")
         ],
         config["main"]["auth_user_bastion"]: [
             ("ssh_approved", "GET"),
@@ -463,6 +486,63 @@ def api_set_user_ssh_keys(username):
         return flask_response({"status": "ERROR", "detail": "Failed saving SSH keys"}, 500)
 
     return api_get_ssh_keys(username)
+
+'''
+Get user's MFA requests
+'''
+@app.route(f"/v{API_VERSION}/mfa_requests/<username>", methods=["GET"])
+def api_get_mfa_requests(username):
+    print("DEBUG: running api_get_mfa_requests at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
+    user_id = get_user_id(username)
+    if not user_id:
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+
+    mfa_requests = get_mfa_requests(username)
+    if mfa_requests == False:
+        return flask_response({"status": "ERROR", "detail": "MFA request retrieval failed"}, 500)
+
+    return flask_response({"status": "OK", "keys": make_serializable(mfa_requests)})
+
+'''
+Authenticate user VPN authentication access
+'''
+@app.route(f"/v{API_VERSION}/mfa_requests/vpn/<username>/<ip_address>/<cert_cn>", methods=["GET"])
+def api_auth_vpn_access(username, ip_address, cert_cn):
+    user_id = get_user_id(username)
+    if not user_id:
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+
+    key_valid = False
+    vpn_keys = get_user_vpn_keys(username)
+    for key in vpn_keys:
+        if key["status"] == "active" and key["uuid"] == cert_cn and key["expires_at"] > datetime.datetime.now():
+            key_valid = True
+            break
+
+    if not key_valid:
+        return flask_response({"status": "OK", "result": "REJECT", "reason": "invalid certificate"})
+
+    ip_address_found = False
+    mfa_requests = get_mfa_requests(username, "vpn")
+    for request in mfa_requests:
+        if request["remote_ip"] == ip_address:
+            ip_address_found = True
+            if request["status"] == "approved" and status["expires_at"] > datetime.datetime.now():
+                return flask_response({"status": "OK", "result": "ACCEPT"})
+
+            if request["status"] == "rejected":
+                return flask_response({"status": "OK", "result": "REJECT", "reason": "MFA rejected"})
+
+    if not ip_address_found:
+        try:
+            cursor = cnx.cursor()
+            cursor.execute("INSERT INTO mfa_requests(created_at, updated_at, user_id, service, remote_ip) VALUES(NOW(), NOW(), %s, 'vpn', %s)", (user_id, ip_address))
+            cnx.commit()
+        except Exception as e:
+            sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}: {e}\n")
+            return flask_response({"status": "ERROR", "detail": "Failed storing MFA request"}, 500)
+
+    return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved"})
 
 '''
 Handle 404s (though normally should get permissions error first)
