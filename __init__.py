@@ -431,8 +431,8 @@ def api_set_vpn_key(username, key_name):
 
     vpn_config = vpn_template.render(
         cert_uuid=cert_uuid,
-        cert_created=cert.not_valid_before.strtime("%Y-%m-%d %H:%M:%S"),
-        cert_expires=cert.not_valid_after.strtime("%Y-%m-%d %H:%M:%S"),
+        cert_created=cert.not_valid_before.strftime("%Y-%m-%d %H:%M:%S"),
+        cert_expires=cert.not_valid_after.strftime("%Y-%m-%d %H:%M:%S"),
         ca_cert=ca_cert,
         public_cert=data_crt,
         private_key=data_key
