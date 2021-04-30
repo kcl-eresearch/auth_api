@@ -451,6 +451,7 @@ def api_set_user_ssh_keys(username):
 
     except Exception as e:
         sys.stderr.write(f"Failed saving SSH keys: {e}\n")
+        raise e
         return flask_response({"status": "ERROR", "detail": "Failed saving SSH keys"}, 500)
 
     return api_get_ssh_keys(username)
