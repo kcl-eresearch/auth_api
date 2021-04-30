@@ -416,7 +416,7 @@ def api_set_user_ssh_keys(username):
 
     existing_named = {}
     for key in existing:
-        existing_named[key["name"]] = existing
+        existing_named[key["name"]] = existing[key]
 
     ssh_keys = flask.request.json
     if not isinstance(ssh_keys, dict):
@@ -451,7 +451,6 @@ def api_set_user_ssh_keys(username):
 
     except Exception as e:
         sys.stderr.write(f"Failed saving SSH keys: {e}\n")
-        raise e
         return flask_response({"status": "ERROR", "detail": "Failed saving SSH keys"}, 500)
 
     return api_get_ssh_keys(username)
