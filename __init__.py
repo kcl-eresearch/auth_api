@@ -9,8 +9,10 @@ import mysql.connector
 import os
 import re
 import shutil
+import smtplib
 import socket
 import sshpubkeys
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -287,6 +289,68 @@ def auth_request(path, method, user):
     sys.stderr.write("Access denied: no valid permissions\n")
 
 '''
+Send email notification to user notifying of key changes
+'''
+def send_email(username, service):
+    try:
+        with open("/etc/auth_api/smtp.yaml") as fh:
+            smtp_config = yaml.safe_load(fh)
+    except Exception as e:
+        sys.stderr.write(f"Failed loading SMTP configuration: {e}\n")
+        return False
+
+    try:
+        with open("/etc/auth_api/mail_template.j2") as fh:
+            mail_template = jinja2.Template(fh.read())
+    except Exception as e:
+        sys.stderr.write(f"Failed loading mail template: {e}\n")
+        return False
+
+    try:
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT display_name, email FROM users WHERE username = %s", (username,))
+        result = cursor.fetchall()
+    except Exception as e:
+        sys.stderr.write("fFailed retrieving user details from database: {e}\n")
+        return False
+
+    if len(result) < 1:
+        sys.stderr.write(f"Did not find user {username} in database\n")
+        return False
+
+    if result[0]["display_name"] == "":
+        result[0]["display_name"] = username
+
+    if result[0]["email"] == "":
+        sys.stderr.write(f"Did not find email address for {username} in database\n")
+        return False
+
+    try:
+        mail_message = mail_template.render(
+            from_name=smtp_config["from_name"],
+            from_addr=smtp_config["from_addr"],
+            display_name=result[0]["display_name"],
+            user_email=result[0]["email"],
+            service_name=service.upper(),
+            username=username
+        )
+    except Exception as e:
+        sys.stderr.write(f"Failed rendering mail message: {e}\n")
+        return False
+
+    try:
+        smtp = smtplib.SMTP(smtp_config["server"], smtp_config["port"])
+        smtp.starttls(ssl.create_default_context())
+        smtp.login(smtp_config["username"], smtp_config["password"])
+        smtp.sendmail(smtp_config["from_addr"], result[0]["email"], )
+        smtp.quit()
+    except Exception as e:
+        sys.stderr.write(f"Failed sending mail message: {e}\n")
+        return False
+
+    return True
+
+'''
 End of functions library
 '''
 
@@ -437,6 +501,8 @@ def api_set_vpn_key(username, key_name):
         public_cert=data_crt.strip(),
         private_key=data_key.strip()
     )
+
+    send_email(username, "vpn")
     return flask_response({"status": "OK", "public_cert": data_crt, "private_key": data_key, "created_at": int(cert.not_valid_before.timestamp()), "expires_at": int(cert.not_valid_after.timestamp()), "name": key_name, "status": "active", "uuid": cert_uuid, "config": vpn_config})
 
 '''
@@ -452,6 +518,7 @@ def api_revoke_vpn_key(username, key_name):
     if not revoke_vpn_key(username, key_name):
         return flask_response({"status": "ERROR", "detail": "Revocation failed"}, 500)
 
+    send_email(username, "vpn")
     return api_get_vpn_keys(username)
 
 '''
@@ -509,6 +576,7 @@ def api_set_user_ssh_keys(username):
         sys.stderr.write(f"Failed saving SSH keys: {e}\n")
         return flask_response({"status": "ERROR", "detail": "Failed saving SSH keys"}, 500)
 
+    send_email(username, "ssh")
     return api_get_ssh_keys(username)
 
 '''
@@ -532,6 +600,7 @@ Approve (or reject) user MFA request
 '''
 @app.route(f"/v{API_VERSION}/mfa_requests/<username>", methods=["POST"])
 def api_set_mfa_request(username):
+    print("DEBUG: running api_set_mfa_request at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
@@ -570,6 +639,7 @@ Authenticate user VPN access
 '''
 @app.route(f"/v{API_VERSION}/vpn_auth/<username>/<ip_address>/<cert_cn>", methods=["GET"])
 def api_auth_vpn_access(username, ip_address, cert_cn):
+    print("DEBUG: running api_auth_vpn_access at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
@@ -611,6 +681,7 @@ Authenticate user SSH access
 '''
 @app.route(f"/v{API_VERSION}/ssh_auth/<username>/<ip_address>", methods=["GET"])
 def api_auth_ssh_access(username, ip_address):
+    print("DEBUG: running api_auth_ssh_access at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
