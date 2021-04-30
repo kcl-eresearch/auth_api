@@ -340,7 +340,7 @@ def send_email(username, service):
 
     try:
         smtp = smtplib.SMTP(smtp_config["server"], smtp_config["port"])
-        smtp.starttls(ssl.create_default_context(cafile="/etc/ssl/certs/ca-certificates.crt"))
+        smtp.starttls(context=ssl.create_default_context())
         smtp.login(smtp_config["username"], smtp_config["password"])
         smtp.sendmail(smtp_config["from_addr"], result[0]["email"], )
         smtp.quit()
