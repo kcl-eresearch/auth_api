@@ -433,9 +433,9 @@ def api_set_vpn_key(username, key_name):
         cert_uuid=cert_uuid,
         cert_created=cert.not_valid_before.strftime("%Y-%m-%d %H:%M:%S"),
         cert_expires=cert.not_valid_after.strftime("%Y-%m-%d %H:%M:%S"),
-        ca_cert=ca_cert,
-        public_cert=data_crt,
-        private_key=data_key
+        ca_cert=ca_cert.strip(),
+        public_cert=data_crt.strip(),
+        private_key=data_key.strip()
     )
     return flask_response({"status": "OK", "public_cert": data_crt, "private_key": data_key, "created_at": int(cert.not_valid_before.timestamp()), "expires_at": int(cert.not_valid_after.timestamp()), "name": key_name, "status": "active", "uuid": cert_uuid, "config": vpn_config})
 
