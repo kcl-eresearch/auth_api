@@ -4,7 +4,7 @@ This is the authentication API used by e-Research Bastion (SSH and OpenVPN) serv
 
 ## API endpoints
 
-### `GET /` Shows system status
+* `GET /` Shows system status
 
 Example output:
 
@@ -22,7 +22,7 @@ Example output:
 }
 ```
 
-### `GET /v{API_VERSION}/ssh_keys/<username>`
+* `GET /v{API_VERSION}/ssh_keys/<username>`
 
 Retrieve the SSH keys belonging to specified username
 
