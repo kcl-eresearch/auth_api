@@ -25,6 +25,8 @@ Example output:
 }
 ```
 
+Use the `version` in API URIs below.
+
 ### Get user's SSH keys
 
 ```
@@ -38,12 +40,46 @@ Example output:
     "keys": [
         {
             "created_at": 1619713687,
-            "name": "mypc",
+            "name": "mylaptopkey",
             "pub_key": "AAAAB3NzaC1yc2EAAAADAQABAAABAQDh9I/G9xfiyJIwlhaL8C5iGbfi9oYgal/tHTi9kbjaDGJH3pt509D3iJm/pGw7jKC6dkYLME4vNf/apd98NfwHFpSs6AvSXuoVidsemJA7CJwn1pETlMb8qtNXZA9BbPG2wmhPf82Ck9lrwNBAkmgi1oLuAA2g/NkMirImbFCpv72omqNQFeJGnoBukAX4++2z3xxGBsXlAcAtrELBWfuaViPs+qy8xXIyYPs1ToUD04RKJkQ24XRZCOyUN7y/boplgwiFOcQxnSnYGh9fMGVvMfyOirvgS8vVzX0hP3h4gjLzK4U6iv32CB5rD+iBepC8JGG1rFlMlatXOsjQEsfh",
             "type": "ssh-rsa"
         }
     ],
     "status": "OK"
 }
+```
 
+### Set user's SSH keys
+
+```
+PUT /v{API_VERSION}/ssh_keys/<username>
+```
+
+Parameters should be supplied as JSON dict containing all keys for user.
+
+Example input:
+
+```
+{
+  "mylaptopkey": {
+    "pub_key": "AAAAB3NzaC1yc2EAAAADAQABAAABAQDh9I/G9xfiyJIwlhaL8C5iGbfi9oYgal/tHTi9kbjaDGJH3pt509D3iJm/pGw7jKC6dkYLME4vNf/apd98NfwHFpSs6AvSXuoVidsemJA7CJwn1pETlMb8qtNXZA9BbPG2wmhPf82Ck9lrwNBAkmgi1oLuAA2g/NkMirImbFCpv72omqNQFeJGnoBukAX4++2z3xxGBsXlAcAtrELBWfuaViPs+qy8xXIyYPs1ToUD04RKJkQ24XRZCOyUN7y/boplgwiFOcQxnSnYGh9fMGVvMfyOirvgS8vVzX0hP3h4gjLzK4U6iv32CB5r",
+    "type": "ssh-rsa"
+  }
+}
+```
+
+Example output:
+
+```
+{
+    "keys": [
+        {
+            "created_at": 1619713687,
+            "name": "mylaptopkey",
+            "pub_key": "AAAAB3NzaC1yc2EAAAADAQABAAABAQDh9I/G9xfiyJIwlhaL8C5iGbfi9oYgal/tHTi9kbjaDGJH3pt509D3iJm/pGw7jKC6dkYLME4vNf/apd98NfwHFpSs6AvSXuoVidsemJA7CJwn1pETlMb8qtNXZA9BbPG2wmhPf82Ck9lrwNBAkmgi1oLuAA2g/NkMirImbFCpv72omqNQFeJGnoBukAX4++2z3xxGBsXlAcAtrELBWfuaViPs+qy8xXIyYPs1ToUD04RKJkQ24XRZCOyUN7y/boplgwiFOcQxnSnYGh9fMGVvMfyOirvgS8vVzX0hP3h4gjLzK4U6iv32CB5rD+iBepC8JGG1rFlMlatXOsjQEsfh",
+            "type": "ssh-rsa"
+        }
+    ],
+    "status": "OK"
+}
 ```
