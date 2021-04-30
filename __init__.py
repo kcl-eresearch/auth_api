@@ -65,7 +65,7 @@ Get a user's details from LDAP
 '''
 def get_ldap_user(username):
     global ldapc
-    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)({config['ldap']['attr_username']}={username}))", [config["ldap"]["attr_email"], config["ldap"]["attr_display_name"]]))
+    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)({config['ldap']['attr_username']}={username}))", [config["ldap"]["attr_email"], config["ldap"]["attr_first_name"], config["ldap"]["attr_last_name"]]))
     if result[1] == []:
         return {}
 
@@ -101,7 +101,7 @@ def get_user_id(username):
 
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("INSERT INTO users(username, display_name, email, created_at) VALUES(%s, %s, %s, NOW())", (username, ldap_user["displayName"][0], ldap_user["mail"][0]))
+        cursor.execute("INSERT INTO users(username, display_name, email, created_at) VALUES(%s, %s, %s, NOW())", (username, (ldap_user[config["ldap"]["attr_first_name"]][0] + " " + ldap_user[config["ldap"]["attr_last_name"]][0]).strip(" -"), ldap_user[config["ldap"]["attr_email"]][0]))
         cnx.commit()
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
