@@ -379,7 +379,7 @@ def api_set_vpn_key(username, key_name):
 
     try:
         with open("/etc/auth_api/vpn_template.j2") as fh:
-            vpn_template = jinja2.template(fh.read())
+            vpn_template = jinja2.Template(fh.read())
     except Exception as e:
         sys.stderr.write(f"Failed loading VPN config template: {e}\n")
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500)
