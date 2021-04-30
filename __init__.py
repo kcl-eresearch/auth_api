@@ -224,7 +224,7 @@ def get_mfa_requests(username, service="all"):
     requests = []
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT id, created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception as e:
         sys.stderr.write(f"Failed getting {service} MFA requests for {username}: {e}")
@@ -502,6 +502,44 @@ def api_get_mfa_requests(username):
         return flask_response({"status": "ERROR", "detail": "MFA request retrieval failed"}, 500)
 
     return flask_response({"status": "OK", "mfa_requests": make_serializable(mfa_requests)})
+
+'''
+Approve (or reject) user MFA request
+'''
+@app.route(f"/v{API_VERSION}/mfa_requests/<username>", methods=["POST"])
+def api_set_mfa_request(username):
+    user_id = get_user_id(username)
+    if not user_id:
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+
+    mfa_request = flask.request.json
+    if not isinstance(mfa_request, dict):
+        return flask_response({"status": "ERROR", "detail": "Invalid MFA request - not a dict"}, 400)
+
+    if "ip_address" not in mfa_request:
+        return flask_response({"status": "ERROR", "detail": "Invalid MFA request - missing ip_address"}, 400)
+
+    if "service" not in mfa_request:
+        return flask_response({"status": "ERROR", "detail": "Invalid MFA request - missing service"}, 400)
+
+    if mfa_request["service"] not in ["ssh", "vpn"]:
+        return flask_response({"status": "ERROR", "detail": "Invalid MFA request - invalid service"}, 400)
+
+    if "status" not in mfa_request:
+        return flask_response({"status": "ERROR", "detail": "Invalid MFA request - missing status"}, 400)
+
+    if mfa_request["status"] not in ["approved", "rejected"]:
+        return flask_response({"status": "ERROR", "detail": "Invalid MFA request - invalid status"}, 400)
+
+    try:
+        cnx = cursor()
+        cursor.execute("UPDATE mfa_requests SET status = %s, updated_at = NOW(), expires_at = %s WHERE user_id = %s AND service = %s AND remote_ip = %s", (mfa_request["status"], datetime.datetime.now() + datetime.timedelta(days=config["main"]["mfa_valid_days"]), user_id, mfa_request["service"], mfa_request["ip_address"]))
+        cnx.commit()
+    except Exception as e:
+        sys.stderr.write(f"Failed updating MFA request for {username}: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "Failed saving MFA request"}, 500)
+
+    return api_get_mfa_requests(username)
 
 '''
 Authenticate user VPN access
