@@ -345,6 +345,7 @@ def send_email(username, service):
         smtp.sendmail(smtp_config["from_addr"], result[0]["email"], )
         smtp.quit()
     except Exception as e:
+        raise e
         sys.stderr.write(f"Failed sending mail message: {e}\n")
         return False
 
