@@ -416,7 +416,7 @@ def api_set_user_ssh_keys(username):
 
     existing_named = {}
     for key in existing:
-        existing_named[key["name"]] = existing[key]
+        existing_named[key["name"]] = key
 
     ssh_keys = flask.request.json
     if not isinstance(ssh_keys, dict):
