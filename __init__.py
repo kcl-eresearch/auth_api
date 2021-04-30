@@ -504,7 +504,7 @@ def api_get_mfa_requests(username):
     return flask_response({"status": "OK", "keys": make_serializable(mfa_requests)})
 
 '''
-Authenticate user VPN authentication access
+Authenticate user VPN access
 '''
 @app.route(f"/v{API_VERSION}/mfa_requests/vpn/<username>/<ip_address>/<cert_cn>", methods=["GET"])
 def api_auth_vpn_access(username, ip_address, cert_cn):
@@ -537,6 +537,40 @@ def api_auth_vpn_access(username, ip_address, cert_cn):
         try:
             cursor = cnx.cursor()
             cursor.execute("INSERT INTO mfa_requests(created_at, updated_at, user_id, service, remote_ip) VALUES(NOW(), NOW(), %s, 'vpn', %s)", (user_id, ip_address))
+            cnx.commit()
+        except Exception as e:
+            sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}: {e}\n")
+            return flask_response({"status": "ERROR", "detail": "Failed storing MFA request"}, 500)
+
+    return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved"})
+
+'''
+Authenticate user SSH access
+'''
+@app.route(f"/v{API_VERSION}/mfa_requests/ssh/<username>/<ip_address>", methods=["GET"])
+def api_auth_ssh_access(username, ip_address):
+    user_id = get_user_id(username)
+    if not user_id:
+        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+
+    ip_address_found = False
+    mfa_requests = get_mfa_requests(username, "ssh")
+    for request in mfa_requests:
+        if request["remote_ip"] == ip_address:
+            ip_address_found = True
+            if request["status"] == "approved" and status["expires_at"] > datetime.datetime.now():
+                keys = get_user_ssh_keys(username)
+                if keys == False:
+                    return flask_response({"status": "ERROR", "detail": "SSH key retrieval failed"}, 500)
+                return flask_response({"status": "OK", "result": "ACCEPT", "keys": make_serializable(keys)})
+
+            if request["status"] == "rejected":
+                return flask_response({"status": "OK", "result": "REJECT", "reason": "MFA rejected"})
+
+    if not ip_address_found:
+        try:
+            cursor = cnx.cursor()
+            cursor.execute("INSERT INTO mfa_requests(created_at, updated_at, user_id, service, remote_ip) VALUES(NOW(), NOW(), %s, 'ssh', %s)", (user_id, ip_address))
             cnx.commit()
         except Exception as e:
             sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}: {e}\n")
