@@ -65,11 +65,20 @@ Get a user's details from LDAP
 '''
 def get_ldap_user(username):
     global ldapc
-    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)({config['ldap']['attr_username']}={username}))", [config["ldap"]["attr_email"], config["ldap"]["attr_first_name"], config["ldap"]["attr_last_name"]]))
+    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)(sAMAccountName={username}))", ["mail", "givenName", "sn", "userAccountControl"]))
     if result[1] == []:
         return {}
 
+    if "mail" not in result[1][0][1]:
+        result[1][0][1]["mail"] = [f"{username}@kcl.ac.uk"]
+
     return result[1][0][1]
+
+'''
+Retrieve sane display name from user LDAP entry
+'''
+def format_name(user_entry):
+    return (user_entry["givenName"][0] + b" " + user_entry["sn"][0]).strip(b" -")
 
 '''
 Get ID from database of relevant user - creating new entry if required
@@ -78,7 +87,7 @@ def get_user_id(username):
     global cnx
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+        cursor.execute("SELECT id FROM users WHERE username = %s AND deleted_at IS NULL", (username,))
         result = cursor.fetchall()
     except Exception as e:
         sys.stderr.write(f"Querying database for user failed: {e}\n")
@@ -101,7 +110,7 @@ def get_user_id(username):
 
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("INSERT INTO users(username, display_name, email, created_at) VALUES(%s, %s, %s, NOW())", (username, (ldap_user[config["ldap"]["attr_first_name"]][0] + b" " + ldap_user[config["ldap"]["attr_last_name"]][0]).strip(b" -"), ldap_user[config["ldap"]["attr_email"]][0]))
+        cursor.execute("INSERT INTO users(username, display_name, email, created_at) VALUES(%s, %s, %s, NOW())", (username, format_name(ldap_user), ldap_user["mail"][0]))
         cnx.commit()
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
@@ -260,7 +269,7 @@ def auth_request(path, method, user):
         return False
 
     # Handle bogus paths
-    m = re.match(r'^/v[0-9]+/([a-z_]+)/[a-z0-9]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?', path)
+    m = re.match(r'^/v[0-9]+/([a-z_]+)/[a-z0-9_]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?', path)
     if not m:
         sys.stderr.write("Access denied: invalid API path\n")
         return False
@@ -280,6 +289,9 @@ def auth_request(path, method, user):
         config["main"]["auth_user_bastion"]: [
             ("ssh_auth", "GET"),
             ("vpn_auth", "GET")
+        ],
+        config["main"]["auth_user_maint"]: [
+            ("maint", "POST")
         ]
     }
 
@@ -434,7 +446,7 @@ def api_set_vpn_key(username, key_name):
     print("DEBUG: running api_set_vpn_key at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     cert_uuid = str(uuid.uuid1())
     tempdir = tempfile.mkdtemp(prefix="vpn_key_")
@@ -513,7 +525,7 @@ def api_revoke_vpn_key(username, key_name):
     print("DEBUG: running api_revoke_vpn_key at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     if not revoke_vpn_key(username, key_name):
         return flask_response({"status": "ERROR", "detail": "Revocation failed"}, 500)
@@ -531,7 +543,7 @@ def api_set_user_ssh_keys(username):
 
     user_id = get_user_id(username)
     if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     existing = get_user_ssh_keys(username)
     if existing == False:
@@ -587,7 +599,7 @@ def api_get_mfa_requests(username):
     print("DEBUG: running api_get_mfa_requests at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     mfa_requests = get_mfa_requests(username)
     if mfa_requests == False:
@@ -603,7 +615,7 @@ def api_set_mfa_request(username):
     print("DEBUG: running api_set_mfa_request at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     mfa_request = flask.request.json
     if not isinstance(mfa_request, dict):
@@ -642,7 +654,7 @@ def api_auth_vpn_access(username, ip_address, cert_cn):
     print("DEBUG: running api_auth_vpn_access at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     key_valid = False
     vpn_keys = get_user_vpn_keys(username)
@@ -684,7 +696,7 @@ def api_auth_ssh_access(username, ip_address):
     print("DEBUG: running api_auth_ssh_access at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User validation failed"}, 500)
+        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     ip_address_found = False
     mfa_requests = get_mfa_requests(username, "ssh")
@@ -710,6 +722,39 @@ def api_auth_ssh_access(username, ip_address):
             return flask_response({"status": "ERROR", "detail": "Failed storing MFA request"}, 500)
 
     return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved"})
+
+'''
+Update users table
+'''
+@app.route(f"/v{API_VERSION}/maint/update_users")
+def api_update_users():
+    try:
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT username, display_name, email, deleted_at FROM users")
+        db_users = cursor.fetchall()
+    except Exception as e:
+        sys.stderr.write(f"Failed getting users: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "Failed getting users"}, 500)
+
+    cursor = cnx.cursor()
+
+    for user_db in db_users:
+        username = user_db["username"]
+        user_ad = get_ldap_user(username)
+        if user_db["deleted_at"] == None:
+            if user_ad == {} or user_ad["userAccountControl"][0] & 2 == 2:
+                cursor.execute("UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE username = %s", (username,))
+        else:
+            if user_ad != {} and user_ad["userAccountControl"][0] & 2 == 0:
+                cursor.execute("UPDATE users SET deleted_at = NULL, updated_at = NOW() WHERE username = %s", (username,))
+
+        if user_ad != {} and format_name(user_ad) != user_db["display_name"]:
+            cursor.execute("UPDATE users SET updated_at = NOW(), display_name = %s WHERE username = %s", (format_name(user_ad), username))
+
+        if user_ad != {} and user_ad["mail"][0] != user_db["email"]:
+            cursor.execute("UPDATE users SET updated_at = NOW(), email = %s WHERE username = %s", (user_ad["mail"][0], username))
+
+    cnx.commit()
 
 '''
 Handle 404s (though normally should get permissions error first)
