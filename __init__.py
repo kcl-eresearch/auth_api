@@ -727,6 +727,7 @@ def api_update_users():
 
     for user_db in db_users:
         username = user_db["username"]
+        print(f"DEBUG: {username}")
         user_ad = get_ldap_user(username)
         if user_db["deleted_at"] == None:
             if user_ad == {} or user_ad["userAccountControl"][0] & 2 == 2:
