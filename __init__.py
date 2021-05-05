@@ -94,7 +94,7 @@ def get_user_id(username):
         return False
 
     if len(result) == 1:
-        if results[0]["deleted_at"] == None:
+        if result[0]["deleted_at"] == None:
             return result[0]["id"]
         else:
             return False
