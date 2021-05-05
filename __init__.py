@@ -726,7 +726,7 @@ def api_auth_ssh_access(username, ip_address):
 '''
 Update users table
 '''
-@app.route(f"/v{API_VERSION}/maint/update_users")
+@app.route(f"/v{API_VERSION}/maint/update_users", methods=["POST"])
 def api_update_users():
     try:
         cursor = cnx.cursor(dictionary=True)
