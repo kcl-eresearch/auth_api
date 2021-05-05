@@ -366,8 +366,6 @@ def send_email(username, service):
 End of functions library
 '''
 
-print("DEBUG: start of script at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
-
 # Must be integer
 API_VERSION = 1
 
@@ -386,7 +384,6 @@ Initalise and authenticate
 '''
 @app.before_request
 def api_before_request():
-    print("DEBUG: running api_before_request at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     if not begin():
         return flask_response({"status": "ERROR", "detail": "API initialisation failed"}, 500)
 
@@ -399,7 +396,6 @@ Status if nothing requested - also used for monitoring
 '''
 @app.route('/')
 def api_status():
-    print("DEBUG: running api_status at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     table_counts = {}
     for table in ['users', 'mfa_requests', 'ssh_keys', 'vpn_keys']:
         try:
@@ -419,7 +415,6 @@ Return a list of user's SSH public keys
 '''
 @app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["GET"])
 def api_get_ssh_keys(username):
-    print("DEBUG: running api_get_ssh_keys at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     keys = get_user_ssh_keys(username)
     if keys == False:
         return flask_response({"status": "ERROR", "detail": "SSH key retrieval failed"}, 500)
@@ -431,7 +426,6 @@ Return a list of user's VPN keys
 '''
 @app.route(f"/v{API_VERSION}/vpn_keys/<username>", methods=["GET"])
 def api_get_vpn_keys(username):
-    print("DEBUG: running api_get_vpn_keys at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     keys = get_user_vpn_keys(username)
     if keys == False:
         return flask_response({"status": "ERROR", "detail": "VPN key retrieval failed"}, 500)
@@ -443,7 +437,6 @@ Create new OpenVPN key/certificate
 '''
 @app.route(f"/v{API_VERSION}/vpn_keys/<username>/<key_name>", methods=["POST"])
 def api_set_vpn_key(username, key_name):
-    print("DEBUG: running api_set_vpn_key at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
@@ -522,7 +515,6 @@ Revoke an OpenVPN key/certificate
 '''
 @app.route(f"/v{API_VERSION}/vpn_keys/<username>/<key_name>", methods=["DELETE"])
 def api_revoke_vpn_key(username, key_name):
-    print("DEBUG: running api_revoke_vpn_key at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
@@ -538,7 +530,6 @@ Set a user's SSH keys
 '''
 @app.route(f"/v{API_VERSION}/ssh_keys/<username>", methods=["PUT"])
 def api_set_user_ssh_keys(username):
-    print("DEBUG: running api_set_user_ssh_keys at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     global config
 
     user_id = get_user_id(username)
@@ -596,7 +587,6 @@ Get user's MFA requests
 '''
 @app.route(f"/v{API_VERSION}/mfa_requests/<username>", methods=["GET"])
 def api_get_mfa_requests(username):
-    print("DEBUG: running api_get_mfa_requests at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
@@ -612,7 +602,6 @@ Approve (or reject) user MFA request
 '''
 @app.route(f"/v{API_VERSION}/mfa_requests/<username>", methods=["POST"])
 def api_set_mfa_request(username):
-    print("DEBUG: running api_set_mfa_request at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
@@ -651,7 +640,6 @@ Authenticate user VPN access
 '''
 @app.route(f"/v{API_VERSION}/vpn_auth/<username>/<ip_address>/<cert_cn>", methods=["GET"])
 def api_auth_vpn_access(username, ip_address, cert_cn):
-    print("DEBUG: running api_auth_vpn_access at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
@@ -693,7 +681,6 @@ Authenticate user SSH access
 '''
 @app.route(f"/v{API_VERSION}/ssh_auth/<username>/<ip_address>", methods=["GET"])
 def api_auth_ssh_access(username, ip_address):
-    print("DEBUG: running api_auth_ssh_access at %s" % datetime.datetime.now().strftime('%H:%M:%S'))
     user_id = get_user_id(username)
     if not user_id:
         return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
