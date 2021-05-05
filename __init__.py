@@ -732,10 +732,10 @@ def api_update_users():
         username = user_db["username"]
         user_ad = get_ldap_user(username)
         if user_db["deleted_at"] == None:
-            if user_ad == {} or user_ad["userAccountControl"][0] & 2 == 2:
+            if user_ad == {} or int(user_ad["userAccountControl"][0]) & 2 == 2:
                 cursor.execute("UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE username = %s", (username,))
         else:
-            if user_ad != {} and user_ad["userAccountControl"][0] & 2 == 0:
+            if user_ad != {} and int(user_ad["userAccountControl"][0]) & 2 == 0:
                 cursor.execute("UPDATE users SET deleted_at = NULL, updated_at = NOW() WHERE username = %s", (username,))
 
         if user_ad != {} and format_name(user_ad) != user_db["display_name"]:
