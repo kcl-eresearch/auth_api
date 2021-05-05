@@ -87,14 +87,17 @@ def get_user_id(username):
     global cnx
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT id FROM users WHERE username = %s AND deleted_at IS NULL", (username,))
+        cursor.execute("SELECT id, deleted_at FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
     except Exception as e:
         sys.stderr.write(f"Querying database for user failed: {e}\n")
         return False
 
     if len(result) == 1:
-        return result[0]["id"]
+        if results[0]["deleted_at"] == None:
+            return result[0]["id"]
+        else:
+            return False
 
     try:
         if not init_ldap():
@@ -728,23 +731,30 @@ def api_update_users():
     if not init_ldap():
         return flask_response({"status": "ERROR", "detail": "Failed LDAP connection"}, 500)
 
+    changes = 0
+
     for user_db in db_users:
         username = user_db["username"]
         user_ad = get_ldap_user(username)
         if user_db["deleted_at"] == None:
             if user_ad == {} or int(user_ad["userAccountControl"][0]) & 2 == 2:
                 cursor.execute("UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE username = %s", (username,))
+                changes += 1
         else:
             if user_ad != {} and int(user_ad["userAccountControl"][0]) & 2 == 0:
                 cursor.execute("UPDATE users SET deleted_at = NULL, updated_at = NOW() WHERE username = %s", (username,))
+                changes += 1
 
         if user_ad != {} and format_name(user_ad) != user_db["display_name"]:
             cursor.execute("UPDATE users SET updated_at = NOW(), display_name = %s WHERE username = %s", (format_name(user_ad), username))
+            changes += 1
 
         if user_ad != {} and user_ad["mail"][0] != user_db["email"]:
             cursor.execute("UPDATE users SET updated_at = NOW(), email = %s WHERE username = %s", (user_ad["mail"][0], username))
+            changes += 1
 
     cnx.commit()
+    return flask_response({"status": "OK", "changes": changes})
 
 '''
 Handle 404s (though normally should get permissions error first)
