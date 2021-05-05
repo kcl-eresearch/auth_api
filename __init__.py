@@ -264,7 +264,7 @@ def auth_request(path, method, user):
         return True
 
     # Deny users not in config file
-    if user not in [config["main"]["auth_user_web"], config["main"]["auth_user_bastion"]]:
+    if user not in [config["main"]["auth_user_web"], config["main"]["auth_user_bastion"], config["main"]["auth_user_maint"]]:
         sys.stderr.write("Access denied: username not authorised\n")
         return False
 
