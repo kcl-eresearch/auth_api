@@ -83,7 +83,7 @@ Example output:
 PUT /v{API_VERSION}/ssh_keys/<username>
 ```
 
-Parameters should be supplied as JSON dict containing all keys for user.
+Parameters should be supplied as JSON hash containing all keys for user, keyed on key name.
 
 Example input:
 
