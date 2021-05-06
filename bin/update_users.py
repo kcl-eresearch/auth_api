@@ -8,7 +8,7 @@ import yaml
 
 def log_error(message):
     syslog.syslog(syslog.LOG_ERR, message)
-    sys.stderr.write(f"message\n")
+    sys.stderr.write(f"{message}\n")
 
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO, message)
