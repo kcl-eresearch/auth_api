@@ -2,7 +2,16 @@
 
 import os
 import psutil
-from lib.mfa import mfa
+import sys
+import syslog
+
+def log_error(message):
+    syslog.syslog(syslog.LOG_ERR, message)
+    sys.stderr.write(f"{message}\n")
+
+def log_info(message):
+    syslog.syslog(syslog.LOG_INFO, message)
+    print(message)
 
 # 0. Get sshd pid (parent pid) and then remote IP from that
 # 1. check for existing approved connection
@@ -16,7 +25,25 @@ from lib.mfa import mfa
 
 #mfa = mfa()
 
-p_sshd = psutil.Process(os.getppid())
-if p_sshd.exe() != "/usr/bin/sshd":
-    sys.stderr.write("Parent process is not sshd\n")
+ppid = os.getppid()
+p_sshd = psutil.Process(ppid)
+if p_sshd.exe() != "/usr/sbin/sshd":
+    log_error("Parent process is not sshd\n")
     sys.exit(1)
+
+remote_ip = None
+for conn in psutil.net_connections(kind="tcp"):
+    if conn.laddr[1] == 22 and conn.status == psutil.CONN_ESTABLISHED:
+        if conn.pid == ppid:
+            remote_ip = conn.raddr[0]
+            break
+        proc = psutil.Process(conn.pid)
+        if proc.ppid() == ppid:
+            remote_ip = conn.raddr[0]
+            break
+
+if not remote_ip:
+    log_error("Cannot determine remote IP address")
+    sys.exit(1)
+
+log_info(remote_ip)
