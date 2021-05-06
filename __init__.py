@@ -747,14 +747,14 @@ def api_update_users():
                 cursor.execute("UPDATE users SET deleted_at = NULL, updated_at = NOW() WHERE username = %s", (username,))
                 changes += 1
 
-        if user_ad != {} and format_name(user_ad) != user_db["display_name"]:
+        if user_ad != {} and format_name(user_ad).decode() != user_db["display_name"]:
             print("Updating name")
             print(format_name(user_ad))
             print(user_db["display_name"])
             cursor.execute("UPDATE users SET updated_at = NOW(), display_name = %s WHERE username = %s", (format_name(user_ad), username))
             changes += 1
 
-        if user_ad != {} and user_ad["mail"][0] != user_db["email"]:
+        if user_ad != {} and user_ad["mail"][0].decode() != user_db["email"]:
             print("Updating email")
             print(user_ad["mail"][0])
             print(user_db["email"])
