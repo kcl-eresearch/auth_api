@@ -34,7 +34,7 @@ except Exception as e:
     sys.exit(1)
 
 if r.status_code != 200:
-    log_error(f"Unexpected status code from POST: {e}")
+    log_error(f"Unexpected status code from POST: {r.status_code}")
     log_error("Response was:")
     log_error(r.text)
     sys.exit(1)
