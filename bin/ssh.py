@@ -1,34 +1,81 @@
 #!/usr/bin/python3
 
 import os
+import pwd
 import psutil
+import requests
 import sys
 import syslog
+import time
+import yaml
 
 def log_error(message):
-    syslog.syslog(syslog.LOG_ERR, message)
+    syslog.syslog(syslog.LOG_ERR | syslog.LOG_AUTHPRIV, message)
     sys.stderr.write(f"{message}\n")
 
 def log_info(message):
-    syslog.syslog(syslog.LOG_INFO, message)
+    syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
     print(message)
 
-# 0. Get sshd pid (parent pid) and then remote IP from that
-# 1. check for existing approved connection
-# 2. request new approved connection if not found
-# 3. check for approval
-# 4. sleep 10
-# 5. goto 3
-# 6. timeout after 60 seconds?
-# 7. if approved, return list of keys
-# 8. otherwise, return empty list/exit 1
+def get_ssh_keys(username, remote_ip):
+    url = f"https://{config['host']}/v{API_VERSION}/ssh_auth/{username}/{remote_ip}"
+    timeout = time.time() + config["timeout"]
+    while time.time() < timeout:
+        try:
+            r = requests.get(url, auth=(config["username"], config["password"]))
+            if r.status_code == 200:
+                try:
+                    response = r.json()
+                    if response["status"] == "OK":
+                        if response["result"] == "ACCEPT":
+                            log_info(f"Accepting authentication for {username} from {remote_ip}")
+                            return response["keys"]
 
-#mfa = mfa()
+                        if response["result"] == "REJECT":
+                            log_info(f"Rejecting authentication for {username} from {remote_ip} - explicit reject")
+                            return []
+
+                        if response["result"] == "PENDING":
+                            pass
+
+                        log_error(f"Unexpected result from {url}: {e}")
+                except Exception as e:
+                    log_error(f"Failed decoding response from {url}: {e}")
+                    log_error("Response was:")
+                    log_error(r.text)
+            else:
+                log_error(f"Unexpected HTTP status fetching {url}: {r.status_code}")
+        except Exception as e:
+            log_error(f"Failed fetching {url}: {e}")
+
+        time.sleep(2)
+
+    log_info(f"Rejecting authentication for {username} from {remote_ip} - timeout")
+    return []
+
+API_VERSION = 1
+
+try:
+    with open("/etc/auth_api.yaml") as fh:
+        config = yaml.safe_load(fh)
+except Exception as e:
+    log_error(f"Failed loading config: {e}")
+    sys.exit(1)
 
 ppid = os.getppid()
 p_sshd = psutil.Process(ppid)
 if p_sshd.exe() != "/usr/sbin/sshd":
-    log_error("Parent process is not sshd\n")
+    log_error("Parent process is not sshd")
+    sys.exit(1)
+
+if len(sys.argv) < 2:
+    log_error("No user specified")
+    sys.exit(1)
+
+try:
+    user = pwd.getpwnam(sys.argv[1])
+except Exception as e:
+    log_error("Invalid user specified")
     sys.exit(1)
 
 remote_ip = None
@@ -46,4 +93,18 @@ if not remote_ip:
     log_error("Cannot determine remote IP address")
     sys.exit(1)
 
-log_info(remote_ip)
+# Drop root privileges no longer required
+pwentry = pwd.getpwnam(config["run_as"])
+
+pid = os.fork()
+if pid == 0:
+    try:
+        os.setgid(pwentry.pw_gid)
+        os.setgroups([])
+        os.setuid(pwentry.pw_uid)
+
+        for key in get_ssh_keys(user.pw_name, remote_ip):
+            print(f"{key['type']} {key['pub_key']}")
+    finally:
+        os._exit(0)
+os.waitpid(pid, 0)
