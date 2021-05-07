@@ -693,7 +693,7 @@ def api_auth_ssh_access(username, ip_address):
     for request in mfa_requests:
         if request["remote_ip"] == ip_address:
             ip_address_found = True
-            if request["status"] == "approved" and status["expires_at"] > datetime.datetime.now():
+            if request["status"] == "approved" and request["expires_at"] > datetime.datetime.now():
                 keys = get_user_ssh_keys(username)
                 if keys == False:
                     return flask_response({"status": "ERROR", "detail": "SSH key retrieval failed"}, 500)
