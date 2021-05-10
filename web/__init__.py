@@ -41,7 +41,7 @@ def begin(config_dir="/etc/auth_api"):
         return False
 
     if "debug" in config["main"] and config["main"]["debug"]:
-        with open("/tmp/auth_api_request_%s_%s_%s.debug" % (flask.request.method, flask.request.remote_addr, datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S")), "w") as fh:
+        with open("/tmp/auth_api_request_%s_%s_%s.debug" % (flask.request.method, flask.request.remote_addr, datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S")), "wb") as fh:
             fh.write(flask.request.data)
 
     return True
