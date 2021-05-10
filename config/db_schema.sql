@@ -48,6 +48,6 @@ CREATE TABLE `ssh_keys` (
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `pub_key` varchar(1024) COLLATE ascii_general_ci NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `ssh_keys_pub_key_unique` (`pub_key`),
+  UNIQUE KEY `ssh_keys_pub_key_unique` (`user_id`, `pub_key`),
   CONSTRAINT `ssh_keys_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
