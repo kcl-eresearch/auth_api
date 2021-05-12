@@ -37,8 +37,8 @@ def get_ssh_keys(username, remote_ip):
 
                         if response["result"] == "PENDING":
                             pass
-
-                        log_error(f"Unexpected result from {url}: {e}")
+                        else:
+                            log_error(f"Unexpected result from {url}: {e}")
                 except Exception as e:
                     log_error(f"Failed decoding response from {url}: {e}")
                     log_error("Response was:")
