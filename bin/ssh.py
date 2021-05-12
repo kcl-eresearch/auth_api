@@ -28,7 +28,7 @@ def get_ssh_keys(username, remote_ip):
                     response = r.json()
                     if response["status"] == "OK":
                         if response["result"] == "ACCEPT":
-                            log_info(f"Accepting authentication for {username} from {remote_ip}")
+                            log_info(f"Accepting authentication for {username} from {remote_ip} - {len(response['keys'])} keys")
                             return response["keys"]
 
                         if response["result"] == "REJECT":
@@ -105,6 +105,8 @@ if pid == 0:
 
         for key in get_ssh_keys(user.pw_name, remote_ip):
             print(f"{key['type']} {key['pub_key']}")
+
+        sys.stdout.flush()
     finally:
         os._exit(0)
 os.waitpid(pid, 0)
