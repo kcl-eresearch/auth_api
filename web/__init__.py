@@ -634,7 +634,7 @@ def api_set_mfa_request(username):
 
     try:
         cursor = cnx.cursor()
-        cursor.execute("UPDATE mfa_requests SET status = %s, updated_at = NOW(), expires_at = %s WHERE user_id = %s AND service = %s AND remote_ip = %s", (mfa_request["status"], datetime.datetime.now() + datetime.timedelta(minutes=config["main"]["mfa_timeout"][mfa_request["status"]]), user_id, mfa_request["service"], mfa_request["ip_address"]))
+        cursor.execute("UPDATE mfa_requests SET status = %s, updated_at = NOW(), expires_at = %s WHERE user_id = %s AND service = %s AND remote_ip = %s AND (expires_at IS NULL OR expires_at > NOW())", (mfa_request["status"], datetime.datetime.now() + datetime.timedelta(minutes=config["main"]["mfa_timeoutfine"][mfa_request["status"]]), user_id, mfa_request["service"], mfa_request["ip_address"]))
         cnx.commit()
     except Exception as e:
         sys.stderr.write(f"Failed updating MFA request for {username}: {e}\n")
