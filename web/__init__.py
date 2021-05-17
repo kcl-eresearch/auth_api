@@ -671,7 +671,7 @@ def api_auth_vpn_access(cert_cn, ip_address):
     for request in mfa_requests:
         if request["remote_ip"] == ip_address:
             ip_address_found = True
-            if request["status"] == "approved" and status["expires_at"] > datetime.datetime.now():
+            if request["status"] == "approved" and request["expires_at"] > datetime.datetime.now():
                 return flask_response({"status": "OK", "result": "ACCEPT", "username": username})
 
             if request["status"] == "rejected":
