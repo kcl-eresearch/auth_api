@@ -3,6 +3,7 @@
 import os
 import pwd
 import psutil
+import re
 import requests
 import sys
 import syslog
@@ -16,8 +17,8 @@ def log_error(message):
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
 
-def get_ssh_keys(username, remote_ip):
-    url = f"https://{config['host']}/v{API_VERSION}/ssh_auth/{username}/{remote_ip}"
+def auth_vpn_access(cert_cn, remote_ip):
+    url = f"https://{config['host']}/v{API_VERSION}/vpn_auth/{cert_cn}/{remote_ip}"
     timeout = time.time() + config["timeout"]
     while time.time() < timeout:
         try:
@@ -27,12 +28,12 @@ def get_ssh_keys(username, remote_ip):
                     response = r.json()
                     if response["status"] == "OK":
                         if response["result"] == "ACCEPT":
-                            log_info(f"Accepting authentication for {username} from {remote_ip}: {len(response['keys'])} keys")
-                            return response["keys"]
+                            log_info(f"Accepting authentication for {response['username']} from {remote_ip} with certificate {cert_cn}")
+                            return 0
 
                         if response["result"] == "REJECT":
-                            log_info(f"Rejecting authentication for {username} from {remote_ip}: {response['reason']}")
-                            return []
+                            log_info(f"Rejecting authentication for {response['username']} from {remote_ip} with certificate {cert_cn}: {response['reason']}")
+                            return 1
 
                         if response["result"] == "PENDING":
                             pass
@@ -49,8 +50,8 @@ def get_ssh_keys(username, remote_ip):
 
         time.sleep(2)
 
-    log_info(f"Rejecting authentication for {username} from {remote_ip}: timeout")
-    return []
+    log_info(f"Rejecting authentication for {response['username']} from {remote_ip}: timeout")
+    return 1
 
 API_VERSION = 1
 
@@ -61,44 +62,25 @@ except Exception as e:
     log_error(f"Failed loading config: {e}")
     sys.exit(1)
 
-ppid = os.getppid()
-p_sshd = psutil.Process(ppid)
-if p_sshd.exe() != "/usr/sbin/sshd":
-    log_error("Parent process is not sshd")
-    sys.exit(1)
-
-if len(sys.argv) < 2:
-    log_error("No user specified")
-    sys.exit(1)
-
-try:
-    user = pwd.getpwnam(sys.argv[1])
-except Exception as e:
-    log_error("Invalid user specified")
-    sys.exit(1)
-
-remote_ip = None
-for conn in psutil.net_connections(kind="tcp"):
-    if conn.laddr[1] == 22 and conn.status == psutil.CONN_ESTABLISHED:
-        if conn.pid == ppid:
-            remote_ip = conn.raddr[0]
-            break
-        proc = psutil.Process(conn.pid)
-        if proc.ppid() == ppid:
-            remote_ip = conn.raddr[0]
-            break
-
-if not remote_ip:
-    log_error("Cannot determine remote IP address")
-    sys.exit(1)
-
-# Drop root privileges no longer required
 pwentry = pwd.getpwnam(config["run_as"])
 os.setgid(pwentry.pw_gid)
 os.setgroups([])
 os.setuid(pwentry.pw_uid)
 
-for key in get_ssh_keys(user.pw_name, remote_ip):
-    print(f"{key['type']} {key['pub_key']}")
+if "common_name" not in os.environ:
+    log_error("No common_name provided")
+    sys.exit(1)
 
-sys.stdout.flush()
+if not re.match(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", os.environ["common_name"]):
+    log_error(f"Invalid common_name {os.environ['common_name']}")
+    sys.exit(1)
+
+if "trusted_ip" not in os.environ:
+    log_error("No trusted_ip provided")
+    sys.exit(1)
+
+if not re.match(r"^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$", os.environ["trusted_ip"]):
+    log_error("Invalid trusted_ip {os.environ['trusted_ip']}")
+    sys.exit(1)
+
+sys.exit(auth_vpn_access(os.environ["common_name"], os.environ["trusted_ip"]))
