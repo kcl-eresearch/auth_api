@@ -644,7 +644,7 @@ Authenticate user VPN access
 @app.route(f"/v{API_VERSION}/vpn_auth/<cert_cn>/<ip_address>", methods=["GET"])
 def api_auth_vpn_access(cert_cn, ip_address):
     try:
-        cursor = cnx.cursor()
+        cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT vpn_keys.expires_at, vpn_keys.status, users.username, users.deleted_at FROM vpn_keys INNER JOIN users ON vpn_keys.user_id = users.id WHERE vpn_keys.uuid = %s", (cert_cn,))
         result = cursor.fetchall()
     except Exception as e:
