@@ -641,21 +641,29 @@ def api_set_mfa_request(username):
 '''
 Authenticate user VPN access
 '''
-@app.route(f"/v{API_VERSION}/vpn_auth/<username>/<ip_address>/<cert_cn>", methods=["GET"])
-def api_auth_vpn_access(username, ip_address, cert_cn):
-    user_id = get_user_id(username)
-    if not user_id:
-        return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
+@app.route(f"/v{API_VERSION}/vpn_auth/<cert_cn>/<ip_address>", methods=["GET"])
+def api_auth_vpn_access(cert_cn, ip_address):
+    try:
+        cursor = cnx.cursor()
+        cursor.execute("SELECT vpn_keys.expires_at, vpn_keys.status, users.username, users.deleted_at FROM vpn_keys INNER JOIN users ON vpn_keys.user_id = users.id WHERE vpn_keys.uuid = %s", (cert_cn,))
+        result = cursor.fetchall()
+    except Exception as e:
+        sys.stderr.write(f"Failed checking certificate {cert_cn}: {e}\n")
+        return flask_response({"status": "ERROR", "detail": "Failed checking certificate"}, 500)
 
-    key_valid = False
-    vpn_keys = get_user_vpn_keys(username)
-    for key in vpn_keys:
-        if key["status"] == "active" and key["uuid"] == cert_cn and key["expires_at"] > datetime.datetime.now():
-            key_valid = True
-            break
+    if len(result) != 1:
+        return flask_response({"status": "OK", "result": "REJECT", "reason": "certificate unknown"})
 
-    if not key_valid:
-        return flask_response({"status": "OK", "result": "REJECT", "reason": "invalid certificate"})
+    username = result[0]['username']
+
+    if result[0]["expires_at"] < datetime.datetime.now():
+        return flask_response({"status": "OK", "result": "REJECT", "reason": "certificate expired", "username": username})
+
+    if result[0]["status"] != "active":
+        return flask_response({"status": "OK", "result": "REJECT", "reason": "certificate revoked", "username": username})
+
+    if result[0]["deleted_at"] != None:
+        return flask_response({"status": "OK", "result": "REJECT", "reason": "user deleted", "username": username})
 
     ip_address_found = False
     mfa_requests = get_mfa_requests(username, "vpn")
@@ -663,10 +671,10 @@ def api_auth_vpn_access(username, ip_address, cert_cn):
         if request["remote_ip"] == ip_address:
             ip_address_found = True
             if request["status"] == "approved" and status["expires_at"] > datetime.datetime.now():
-                return flask_response({"status": "OK", "result": "ACCEPT"})
+                return flask_response({"status": "OK", "result": "ACCEPT", "username": username})
 
             if request["status"] == "rejected":
-                return flask_response({"status": "OK", "result": "REJECT", "reason": "MFA rejected"})
+                return flask_response({"status": "OK", "result": "REJECT", "reason": "MFA rejected", "username": username})
 
     if not ip_address_found:
         try:
@@ -677,7 +685,7 @@ def api_auth_vpn_access(username, ip_address, cert_cn):
             sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}: {e}\n")
             return flask_response({"status": "ERROR", "detail": "Failed storing MFA request"}, 500)
 
-    return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved"})
+    return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved", "username": username})
 
 '''
 Authenticate user SSH access
