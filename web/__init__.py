@@ -294,6 +294,7 @@ def auth_request(path, method, user):
             ("mfa_requests", "POST")
         ],
         config["main"]["auth_user_bastion"]: [
+            ("ssh_keys", "GET"),
             ("ssh_auth", "GET"),
             ("vpn_auth", "GET")
         ],
