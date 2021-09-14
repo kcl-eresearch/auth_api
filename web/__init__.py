@@ -16,6 +16,7 @@ import ssl
 import subprocess
 import sys
 import tempfile
+import traceback
 import uuid
 import yaml
 
@@ -30,14 +31,16 @@ def begin(config_dir="/etc/auth_api"):
         try:
             with open(config_file) as fh:
                 config[file] = yaml.safe_load(fh)
-        except Exception as e:
-            sys.stderr.write(f"Failed loading {config_file}: {e}\n")
+        except Exception:
+            sys.stderr.write("Failed loading {config_file}:\n")
+            sys.stderr.write(traceback.format_exc())
             return False
 
     try:
         cnx = mysql.connector.connect(host=config["db"]["host"], user=config["db"]["user"], password=config["db"]["password"], database=config["db"]["database"])
-    except Exception as e:
-        sys.stderr.write(f"Failed connecting to database: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed connecting to database:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     if "debug" in config["main"] and config["main"]["debug"]:
@@ -58,8 +61,9 @@ def init_ldap():
         ldapc.set_option(ldap.OPT_REFERRALS, 0)
         ldapc.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
         ldapc.simple_bind_s(config["ldap"]["bind_dn"], config["ldap"]["bind_pw"])
-    except Exception as e:
-        sys.stderr.write(f"Failed connecting to LDAP: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed connecting to LDAP:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     return True
@@ -93,8 +97,9 @@ def get_user_id(username):
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT id, deleted_at FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Querying database for user failed: {e}\n")
+    except Exception:
+        sys.stderr.write("Querying database for user failed:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     if len(result) == 1:
@@ -108,8 +113,9 @@ def get_user_id(username):
             return False
 
         ldap_user = get_ldap_user(username)
-    except Exception as e:
-        sys.stderr.write(f"Querying LDAP for user failed: {e}\n")
+    except Exception:
+        sys.stderr.write("Querying LDAP for user failed:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     if ldap_user == {}:
@@ -121,8 +127,9 @@ def get_user_id(username):
         cnx.commit()
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Adding new user to database failed: {e}\n")
+    except Exception:
+        sys.stderr.write("Adding new user to database failed:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     if len(result) == 1:
@@ -144,8 +151,9 @@ def get_user_ssh_keys(username):
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT created_at, name, type, pub_key FROM ssh_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Error getting ssh keys for {username}: {e}\n")
+    except Exception:
+        sys.stderr.write(f"Error getting ssh keys for {username}:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     return result
@@ -163,8 +171,9 @@ def get_user_vpn_keys(username):
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT created_at, expires_at, uuid, name, public_cert, status FROM vpn_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Error getting VPN certs for {username}: {e}\n")
+    except Exception:
+        sys.stderr.write(f"Error getting VPN certs for {username}:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     return result
@@ -198,7 +207,7 @@ def validate_ssh_key(type, pub_key, name):
     ssh_key = sshpubkeys.SSHKey(f"{type} {pub_key} {name}")
     try:
         ssh_key.parse()
-    except Exception as e:
+    except Exception:
         return False
     return True
 
@@ -214,8 +223,9 @@ def revoke_vpn_key(username, key_name):
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT id, public_cert FROM vpn_keys WHERE status = 'active' AND user_id = %s AND name = %s", (user_id, key_name))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Failed getting data for user {username} certificate {key_name}: {e}\n")
+    except Exception:
+        sys.stderr.write(f"Failed getting data for user {username} certificate {key_name}:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     try:
@@ -226,8 +236,9 @@ def revoke_vpn_key(username, key_name):
             token = subprocess.check_output([config["ca"]["exe"], "ca", "token", "--provisioner", config["ca"]["provisioner"], "--password-file", "/etc/auth_api/ca_password.txt", "--ca-url", config["ca"]["url"], "--root", config["ca"]["root_crt"], "--revoke", serial_number], stderr=subprocess.DEVNULL).strip()
             revoke = subprocess.check_output([config["ca"]["exe"], "ca", "revoke", serial_number, "--token", token], stderr=subprocess.DEVNULL)
         cnx.commit()
-    except Exception as e:
-        sys.stderr.write(f"Failed setting revocation status in database for user {username} certificate {key_name}: {e}\n")
+    except Exception:
+        sys.stderr.write(f"Failed setting revocation status in database for user {username} certificate {key_name}:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     return True
@@ -245,8 +256,9 @@ def get_mfa_requests(username, service="all"):
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s AND (expires_at IS NULL OR expires_at > NOW())", (user_id,))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Failed getting {service} MFA requests for {username}: {e}")
+    except Exception:
+        sys.stderr.write(f"Failed getting {service} MFA requests for {username}:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     for request in result:
@@ -315,23 +327,26 @@ def send_email(username, service):
     try:
         with open("/etc/auth_api/smtp.yaml") as fh:
             smtp_config = yaml.safe_load(fh)
-    except Exception as e:
-        sys.stderr.write(f"Failed loading SMTP configuration: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed loading SMTP configuration:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     try:
         with open("/etc/auth_api/mail_template.j2") as fh:
             mail_template = jinja2.Template(fh.read())
-    except Exception as e:
-        sys.stderr.write(f"Failed loading mail template: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed loading mail template:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     try:
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT display_name, email FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write("fFailed retrieving user details from database: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed retrieving user details from database:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     if len(result) < 1:
@@ -354,8 +369,9 @@ def send_email(username, service):
             service_name=service.upper(),
             username=username
         )
-    except Exception as e:
-        sys.stderr.write(f"Failed rendering mail message: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed rendering mail message:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     try:
@@ -364,8 +380,9 @@ def send_email(username, service):
         smtp.login(smtp_config["username"], smtp_config["password"])
         smtp.sendmail(smtp_config["from_addr"], result[0]["email"], mail_message)
         smtp.quit()
-    except Exception as e:
-        sys.stderr.write(f"Failed sending mail message: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed sending mail message:\n")
+        sys.stderr.write(traceback.format_exc())
         return False
 
     return True
@@ -411,7 +428,8 @@ def api_status():
             cursor.execute(f"SELECT COUNT(*) AS table_count FROM {table}")
             result = cursor.fetchall()
         except Exception as e:
-            sys.stderr.write(f"Error getting status (count of {table} table): {e}\n")
+            sys.stderr.write(f"Error getting status (count of {table} table):\n")
+            sys.stderr.write(traceback.format_exc())
             return flask_response({"status": "ERROR", "detail": f"Failed getting {table} count: {e}"}, 500)
 
         table_counts[table] = result[0]["table_count"]
@@ -457,21 +475,24 @@ def api_set_vpn_key(username, key_name):
     try:
         with open("/etc/auth_api/vpn_template.j2") as fh:
             vpn_template = jinja2.Template(fh.read())
-    except Exception as e:
-        sys.stderr.write(f"Failed loading VPN config template: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed loading VPN config template:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500)
 
     try:
         with open(config["ca"]["root_crt"]) as fh:
             ca_cert = fh.read()
-    except Exception as e:
-        sys.stderr.write(f"Failed loading CA cert: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed loading CA cert:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500)
 
     try:
         output = subprocess.check_output([config["ca"]["exe"], "ca", "certificate", "--provisioner", config["ca"]["provisioner"], "--provisioner-password-file", "/etc/auth_api/ca_password.txt", "--ca-url", config["ca"]["url"], "--root", config["ca"]["root_crt"], "--not-after", "%dh" % (24 * config["ca"]["cert_lifetime"]), cert_uuid, path_crt, path_key], stderr=subprocess.STDOUT)
-    except Exception as e:
-        sys.stderr.write(f"Failed generating VPN key/certificate: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed generating VPN key/certificate:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500)
 
     try:
@@ -479,14 +500,16 @@ def api_set_vpn_key(username, key_name):
             data_crt = fh.read()
         with open(path_key) as fh:
             data_key = fh.read()
-    except Exception as e:
-        sys.stderr.write(f"Failed reading new VPN key/certificate: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed reading new VPN key/certificate:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate read failed"}, 500)
 
     try:
         cert = x509.load_pem_x509_certificate(data_crt.encode('utf8'), default_backend())
-    except Exception as e:
-        sys.stderr.write(f"Failed decoding new certificate: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed decoding new certificate:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate decode failed"}, 500)
 
     if not revoke_vpn_key(username, key_name):
@@ -496,8 +519,9 @@ def api_set_vpn_key(username, key_name):
         cursor = cnx.cursor()
         cursor.execute("INSERT INTO vpn_keys(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, 'active')", (cert.not_valid_before, cert.not_valid_after, user_id, cert_uuid, key_name, data_crt))
         cnx.commit()
-    except Exception as e:
-        sys.stderr.write(f"Failed storing certificate in database: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed storing certificate in database:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "VPN key/certificate database storage failed"}, 500)
 
     shutil.rmtree(tempdir)
@@ -579,8 +603,9 @@ def api_set_user_ssh_keys(username):
 
         cnx.commit()
 
-    except Exception as e:
-        sys.stderr.write(f"Failed saving SSH keys: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed saving SSH keys:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "Failed saving SSH keys"}, 500)
 
     send_email(username, "ssh")
@@ -633,8 +658,9 @@ def api_set_mfa_request(username):
         cursor = cnx.cursor()
         cursor.execute("UPDATE mfa_requests SET status = %s, updated_at = NOW(), expires_at = %s WHERE user_id = %s AND service = %s AND remote_ip = %s AND (expires_at IS NULL OR expires_at > NOW())", (mfa_request["status"], datetime.datetime.now() + datetime.timedelta(minutes=config["main"]["mfa_timeout"][mfa_request["status"]]), user_id, mfa_request["service"], mfa_request["ip_address"]))
         cnx.commit()
-    except Exception as e:
-        sys.stderr.write(f"Failed updating MFA request for {username}: {e}\n")
+    except Exception:
+        sys.stderr.write(f"Failed updating MFA request for {username}:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "Failed saving MFA request"}, 500)
 
     return api_get_mfa_requests(username)
@@ -648,8 +674,9 @@ def api_auth_vpn_access(cert_cn, ip_address):
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT vpn_keys.expires_at, vpn_keys.status, vpn_keys.user_id, users.username, users.deleted_at FROM vpn_keys INNER JOIN users ON vpn_keys.user_id = users.id WHERE vpn_keys.uuid = %s", (cert_cn,))
         result = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Failed checking certificate {cert_cn}: {e}\n")
+    except Exception:
+        sys.stderr.write(f"Failed checking certificate {cert_cn}:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "Failed checking certificate"}, 500)
 
     if len(result) != 1:
@@ -683,8 +710,9 @@ def api_auth_vpn_access(cert_cn, ip_address):
             cursor = cnx.cursor()
             cursor.execute("INSERT INTO mfa_requests(created_at, updated_at, user_id, service, remote_ip) VALUES(NOW(), NOW(), %s, 'vpn', %s)", (user_id, ip_address))
             cnx.commit()
-        except Exception as e:
-            sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}: {e}\n")
+        except Exception:
+            sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}:\n")
+            sys.stderr.write(traceback.format_exc())
             return flask_response({"status": "ERROR", "detail": "Failed storing MFA request"}, 500)
 
     return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved", "username": username})
@@ -717,8 +745,9 @@ def api_auth_ssh_access(username, ip_address):
             cursor = cnx.cursor()
             cursor.execute("INSERT INTO mfa_requests(created_at, updated_at, user_id, service, remote_ip) VALUES(NOW(), NOW(), %s, 'ssh', %s)", (user_id, ip_address))
             cnx.commit()
-        except Exception as e:
-            sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}: {e}\n")
+        except Exception:
+            sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}:\n")
+            sys.stderr.write(traceback.format_exc())
             return flask_response({"status": "ERROR", "detail": "Failed storing MFA request"}, 500)
 
     return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved"})
@@ -732,8 +761,9 @@ def api_update_users():
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("SELECT username, display_name, email, deleted_at FROM users")
         db_users = cursor.fetchall()
-    except Exception as e:
-        sys.stderr.write(f"Failed getting users: {e}\n")
+    except Exception:
+        sys.stderr.write("Failed getting users:\n")
+        sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "Failed getting users"}, 500)
 
     cursor = cnx.cursor()
