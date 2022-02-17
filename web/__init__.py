@@ -312,7 +312,12 @@ def auth_request(path, method, user):
         ],
         config["main"]["auth_user_maint"]: [
             ("maint", "POST")
-        ]
+        ],
+        config["main"]["auth_user_admin"]: [
+            ("ssh_keys", "GET"),
+            ("vpn_keys", "GET"),
+            ("mfa_requests", "GET")
+        ],
     }
 
     if (req_function, method) in permissions[user]:
