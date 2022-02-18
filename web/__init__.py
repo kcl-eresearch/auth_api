@@ -268,6 +268,26 @@ def get_mfa_requests(username, service="all"):
     return requests
 
 '''
+Get all current MFA requests from database
+'''
+def get_mfa_requests_all(service="all"):
+    requests = []
+    try:
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE expires_at IS NULL OR expires_at > NOW()")
+        result = cursor.fetchall()
+    except Exception:
+        sys.stderr.write(f"Failed getting {service} MFA requests:\n")
+        sys.stderr.write(traceback.format_exc())
+        return False
+
+    for request in result:
+        if service == "all" or service == request["service"]:
+            requests.append(request)
+
+    return requests
+
+'''
 Authenticate request based on path, method and user
 '''
 def auth_request(path, method, user):
@@ -312,7 +332,12 @@ def auth_request(path, method, user):
         ],
         config["main"]["auth_user_maint"]: [
             ("maint", "POST")
-        ]
+        ],
+        config["main"]["auth_user_admin"]: [
+            ("ssh_keys", "GET"),
+            ("vpn_keys", "GET"),
+            ("mfa_requests", "GET")
+        ],
     }
 
     if (req_function, method) in permissions[user]:
@@ -621,6 +646,17 @@ def api_get_mfa_requests(username):
         return flask_response({"status": "ERROR", "detail": "User not found"}, 404)
 
     mfa_requests = get_mfa_requests(username)
+    if mfa_requests == False:
+        return flask_response({"status": "ERROR", "detail": "MFA request retrieval failed"}, 500)
+
+    return flask_response({"status": "OK", "mfa_requests": make_serializable(mfa_requests)})
+
+'''
+Get all users' MFA requests
+'''
+@app.route(f"/v{API_VERSION}/mfa_requests", methods=["GET"])
+def api_get_mfa_requests_all():
+    mfa_requests = get_mfa_requests_all()
     if mfa_requests == False:
         return flask_response({"status": "ERROR", "detail": "MFA request retrieval failed"}, 500)
 
