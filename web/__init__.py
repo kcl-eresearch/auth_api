@@ -274,7 +274,7 @@ def get_mfa_requests_all(service="all"):
     requests = []
     try:
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute("SELECT created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE expires_at IS NULL OR expires_at > NOW()")
+        cursor.execute("SELECT users.username, mfa_requests.created_at, mfa_requests.updated_at, mfa_requests.expires_at, mfa_requests.service, mfa_requests.remote_ip, mfa_requests.status FROM mfa_requests INNER JOIN users ON mfa_requests.user_id = users.id WHERE expires_at IS NULL OR expires_at > NOW()")
         result = cursor.fetchall()
     except Exception:
         sys.stderr.write(f"Failed getting {service} MFA requests:\n")
@@ -314,9 +314,9 @@ def auth_request(path, method, user):
         return False
 
     # Handle bogus paths
-    m = re.match(r'^/v[0-9]+/([a-z_]+)/[a-z0-9_]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?', path)
+    m = re.match(r'^/v[0-9]+/([a-z_]+)(/[a-z0-9_]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?)?', path)
     if not m:
-        sys.stderr.write("Access denied: invalid API path\n")
+        sys.stderr.write(f"Access denied for {user}: invalid API path: {path}\n")
         return False
 
     req_function = m.group(1)
