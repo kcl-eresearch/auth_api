@@ -303,8 +303,14 @@ def auth_request(path, method, user):
         return True
 
     # Deny users not in config file
-    if user not in [config["main"]["auth_user_web"], config["main"]["auth_user_bastion"], config["main"]["auth_user_maint"]]:
-        sys.stderr.write("Access denied: username not authorised\n")
+    user_valid = False
+    for k, v in config["main"].items():
+        if re.match(r"^auth_user_", k) and user == v:
+            user_valid = True
+            break
+
+    if not user_valid:
+        sys.stderr.write(f"Access denied: username {user} not valid\n")
         return False
 
     # Handle bogus paths
