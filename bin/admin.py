@@ -23,7 +23,7 @@ def api_get(uri):
         if r.status_code == 200:
             response = r.json()
         else:
-            sys.stderr.write("Could not retrieve user from API\n")
+            sys.stderr.write("Could not retrieve data from API\n")
             sys.exit(1)
     except Exception as e:
         sys.stderr.write(f"Failed fetching {uri}: {e}\n")
