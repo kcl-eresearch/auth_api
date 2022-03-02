@@ -78,7 +78,7 @@ def get_ldap_user(username):
         return {}
 
     if "mail" not in result[1][0][1]:
-        result[1][0][1]["mail"] = [f"{username}@kcl.ac.uk"]
+        result[1][0][1]["mail"] = [f"{username}@kcl.ac.uk".encode()]
 
     return result[1][0][1]
 
