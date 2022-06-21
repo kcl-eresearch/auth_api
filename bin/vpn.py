@@ -83,7 +83,6 @@ def auth_vpn_access(cert_cn, remote_ip):
     return 1
 
 API_VERSION = 1
-GROUPS_FILE = "/etc/openvpn_groups.yaml"
 
 try:
     with open("/etc/auth_api.yaml") as fh:
