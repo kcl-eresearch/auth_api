@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
+import grp
 import os
 import pwd
-import psutil
 import re
 import requests
 import sys
@@ -17,9 +17,33 @@ def log_error(message):
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
 
+def auth_vpn_group(username):
+    openvpn_groups = []
+    try:
+        with open("/etc/openvpn_groups.yaml") as fh:
+            openvpn_groups = yaml.safe_load(fh)
+    
+    except Exception as e:
+        log_error("Failed loading group list: %s" % e)
+        return False
+    
+    user_group_ids = []
+    try:
+        user_group_ids = os.getgrouplist(username, pwd.getpwnam(username).pw_gid)
+    except Exception as e:
+        log_error("Failed getting group information for user %s: %e" % (username, e))
+        return False
+    
+    for group_id in user_group_ids:
+        if grp.getgrgid(group_id).gr_name in openvpn_groups:
+            return True
+    
+    return False
+
 def auth_vpn_access(cert_cn, remote_ip):
     url = f"https://{config['host']}/v{API_VERSION}/vpn_auth/{cert_cn}/{remote_ip}"
     timeout = time.time() + config["timeout"]
+
     while time.time() < timeout:
         try:
             r = requests.get(url, auth=(config["username"], config["password"]))
@@ -28,8 +52,13 @@ def auth_vpn_access(cert_cn, remote_ip):
                     response = r.json()
                     if response["status"] == "OK":
                         if response["result"] == "ACCEPT":
-                            log_info(f"Accepting authentication for {response['username']} from {remote_ip} with certificate {cert_cn}")
-                            return 0
+                            if auth_vpn_group(response['username']):
+                                log_info(f"Accepting authentication for {response['username']} from {remote_ip} with certificate {cert_cn}")
+                                return 0
+                               
+                            else:
+                                log_info(f"Rejecting authentication for {response['username']} from {remote_ip} with certificate {cert_cn}: not in access groups")
+                                return 1
 
                         if response["result"] == "REJECT":
                             log_info(f"Rejecting authentication for {response['username']} from {remote_ip} with certificate {cert_cn}: {response['reason']}")
