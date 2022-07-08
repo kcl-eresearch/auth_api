@@ -429,7 +429,6 @@ End of functions library
 API_VERSION = 1
 
 config = {}
-g.db_conn = None
 ldapc = None
 
 app = flask.Flask(__name__)
