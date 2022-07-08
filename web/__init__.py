@@ -23,7 +23,6 @@ import yaml
 '''
 Open config and connect to database
 '''
-
 def begin(config_dir="/etc/auth_api"):
     global cnx, config
     for file in ["main", "ca", "db", "ldap"]:
@@ -48,6 +47,13 @@ def begin(config_dir="/etc/auth_api"):
             fh.write(flask.request.data)
 
     return True
+
+'''
+Close database connection
+'''
+def finish():
+    global cnx
+    cnx.close()
 
 '''
 Initialise LDAP connection
@@ -446,6 +452,12 @@ def api_before_request():
     if not auth_request(flask.request.path, flask.request.method, flask.request.remote_user):
         return flask_response({"status": "ERROR", "detail": "Forbidden"}, 403)
 
+'''
+Tidy up after ourselves
+'''
+@app.teardown_request
+def api_teardown_request():
+    finish()
 
 '''
 Status if nothing requested - also used for monitoring
