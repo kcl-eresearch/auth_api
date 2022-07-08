@@ -456,7 +456,7 @@ def api_before_request():
 Tidy up after ourselves
 '''
 @app.teardown_request
-def api_teardown_request():
+def api_teardown_request(exception=None):
     finish()
 
 '''
