@@ -40,9 +40,29 @@ def auth_vpn_group(username):
     
     return False
 
+def auth_vpn_mfa_bypass(cert_cn, remote_ip):
+    try:
+        with open("/etc/openvpn_mfa_bypass.yaml") as f:
+            bypass_addresses = yaml.safe_load(fh)
+    except Exception:
+        return False
+    
+    if not remote_ip in bypass_addresses:
+        return False
+    
+    for cn in bypass_addresses[remote_ip]:
+        if cn == cert_cn:
+            return True
+    
+    return False
+
 def auth_vpn_access(cert_cn, remote_ip):
     url = f"https://{config['host']}/v{API_VERSION}/vpn_auth/{cert_cn}/{remote_ip}"
     timeout = time.time() + config["timeout"]
+
+    if auth_vpn_mfa_bypass(cert_cn, remote_ip):
+        log_info(f"Accepting authentication from {remote_ip} with certificate {cert_cn} - MFA bypass")
+        return 0
 
     while time.time() < timeout:
         try:
