@@ -42,7 +42,7 @@ def auth_vpn_group(username):
 
 def auth_vpn_mfa_bypass(cert_cn, remote_ip):
     try:
-        with open("/etc/openvpn_mfa_bypass.yaml") as f:
+        with open("/etc/openvpn_mfa_bypass.yaml") as fh:
             bypass_addresses = yaml.safe_load(fh)
     except Exception:
         return False
