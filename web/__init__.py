@@ -1,5 +1,6 @@
 from cryptography.hazmat.backends import default_backend
 from cryptography import x509
+from flask import g
 import datetime
 import flask
 import jinja2
@@ -24,7 +25,7 @@ import yaml
 Open config and connect to database
 '''
 def begin(config_dir="/etc/auth_api"):
-    global cnx, config
+    global config
     for file in ["main", "ca", "db", "ldap"]:
         config_file = f"{config_dir}/{file}.yaml"
         try:
@@ -36,7 +37,7 @@ def begin(config_dir="/etc/auth_api"):
             return False
 
     try:
-        cnx = mysql.connector.connect(host=config["db"]["host"], user=config["db"]["user"], password=config["db"]["password"], database=config["db"]["database"])
+        g.db_conn = mysql.connector.connect(host=config["db"]["host"], user=config["db"]["user"], password=config["db"]["password"], database=config["db"]["database"])
     except Exception:
         sys.stderr.write("Failed connecting to database:\n")
         sys.stderr.write(traceback.format_exc())
@@ -52,8 +53,7 @@ def begin(config_dir="/etc/auth_api"):
 Close database connection
 '''
 def finish():
-    global cnx
-    cnx.close()
+    g.db_conn.close()
 
 '''
 Initialise LDAP connection
@@ -98,9 +98,8 @@ def format_name(user_entry):
 Get ID from database of relevant user - creating new entry if required
 '''
 def get_user_id(username):
-    global cnx
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT id, deleted_at FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
     except Exception:
@@ -128,9 +127,9 @@ def get_user_id(username):
         return 0
 
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("INSERT INTO users(username, display_name, email, created_at) VALUES(%s, %s, %s, NOW())", (username, format_name(ldap_user), ldap_user["mail"][0]))
-        cnx.commit()
+        g.db_conn.commit()
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
     except Exception:
@@ -148,13 +147,12 @@ def get_user_id(username):
 Get a user's SSH keys
 '''
 def get_user_ssh_keys(username):
-    global cnx
     user_id = get_user_id(username)
     if not user_id:
         return False
 
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT created_at, name, type, pub_key FROM ssh_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception:
@@ -168,13 +166,12 @@ def get_user_ssh_keys(username):
 Get a user's VPN certs from database
 '''
 def get_user_vpn_keys(username):
-    global cnx
     user_id = get_user_id(username)
     if not user_id:
         return False
 
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT created_at, expires_at, uuid, name, public_cert, status FROM vpn_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception:
@@ -226,7 +223,7 @@ def revoke_vpn_key(username, key_name):
         return False
 
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT id, public_cert FROM vpn_keys WHERE status = 'active' AND user_id = %s AND name = %s", (user_id, key_name))
         result = cursor.fetchall()
     except Exception:
@@ -241,7 +238,7 @@ def revoke_vpn_key(username, key_name):
             serial_number = str(cert_data.serial_number)
             token = subprocess.check_output([config["ca"]["exe"], "ca", "token", "--provisioner", config["ca"]["provisioner"], "--password-file", "/etc/auth_api/ca_password.txt", "--ca-url", config["ca"]["url"], "--root", config["ca"]["root_crt"], "--revoke", serial_number], stderr=subprocess.DEVNULL).strip()
             revoke = subprocess.check_output([config["ca"]["exe"], "ca", "revoke", serial_number, "--token", token], stderr=subprocess.DEVNULL)
-        cnx.commit()
+        g.db_conn.commit()
     except Exception:
         sys.stderr.write(f"Failed setting revocation status in database for user {username} certificate {key_name}:\n")
         sys.stderr.write(traceback.format_exc())
@@ -259,7 +256,7 @@ def get_mfa_requests(username, service="all"):
 
     requests = []
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s AND (expires_at IS NULL OR expires_at > NOW())", (user_id,))
         result = cursor.fetchall()
     except Exception:
@@ -279,7 +276,7 @@ Get all current MFA requests from database
 def get_mfa_requests_all(service="all"):
     requests = []
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT users.username, mfa_requests.created_at, mfa_requests.updated_at, mfa_requests.expires_at, mfa_requests.service, mfa_requests.remote_ip, mfa_requests.status FROM mfa_requests INNER JOIN users ON mfa_requests.user_id = users.id WHERE expires_at IS NULL OR expires_at > NOW()")
         result = cursor.fetchall()
     except Exception:
@@ -378,7 +375,7 @@ def send_email(username, service):
         return False
 
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT display_name, email FROM users WHERE username = %s", (username,))
         result = cursor.fetchall()
     except Exception:
@@ -432,7 +429,7 @@ End of functions library
 API_VERSION = 1
 
 config = {}
-cnx = None
+g.db_conn = None
 ldapc = None
 
 app = flask.Flask(__name__)
@@ -467,7 +464,7 @@ def api_status():
     table_counts = {}
     for table in ['users', 'mfa_requests', 'ssh_keys', 'vpn_keys']:
         try:
-            cursor = cnx.cursor(dictionary=True)
+            cursor = g.db_conn.cursor(dictionary=True)
             cursor.execute(f"SELECT COUNT(*) AS table_count FROM {table}")
             result = cursor.fetchall()
         except Exception as e:
@@ -559,9 +556,9 @@ def api_set_vpn_key(username, key_name):
         return flask_response({"status": "ERROR", "detail": "Old VPN key/certificate revocation failed"}, 500)
 
     try:
-        cursor = cnx.cursor()
+        cursor = g.db_conn.cursor()
         cursor.execute("INSERT INTO vpn_keys(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, 'active')", (cert.not_valid_before, cert.not_valid_after, user_id, cert_uuid, key_name, data_crt))
-        cnx.commit()
+        g.db_conn.commit()
     except Exception:
         sys.stderr.write("Failed storing certificate in database:\n")
         sys.stderr.write(traceback.format_exc())
@@ -622,7 +619,7 @@ def api_set_user_ssh_keys(username):
     queries = []
 
     try:
-        cursor = cnx.cursor()
+        cursor = g.db_conn.cursor()
         for name, key in ssh_keys.items():
             if name == "" or not isinstance(name, str):
                 return flask_response({"status": "ERROR", "detail": "Invalid key name"}, 400)
@@ -644,7 +641,7 @@ def api_set_user_ssh_keys(username):
             if name not in ssh_keys:
                 cursor.execute("DELETE FROM ssh_keys WHERE user_id = %s AND name = %s", (user_id, name))
 
-        cnx.commit()
+        g.db_conn.commit()
 
     except Exception:
         sys.stderr.write("Failed saving SSH keys:\n")
@@ -709,9 +706,9 @@ def api_set_mfa_request(username):
         return flask_response({"status": "ERROR", "detail": "Invalid MFA request - invalid status"}, 400)
 
     try:
-        cursor = cnx.cursor()
+        cursor = g.db_conn.cursor()
         cursor.execute("UPDATE mfa_requests SET status = %s, updated_at = NOW(), expires_at = %s WHERE user_id = %s AND service = %s AND remote_ip = %s AND (expires_at IS NULL OR expires_at > NOW())", (mfa_request["status"], datetime.datetime.now() + datetime.timedelta(minutes=config["main"]["mfa_timeout"][mfa_request["status"]]), user_id, mfa_request["service"], mfa_request["ip_address"]))
-        cnx.commit()
+        g.db_conn.commit()
     except Exception:
         sys.stderr.write(f"Failed updating MFA request for {username}:\n")
         sys.stderr.write(traceback.format_exc())
@@ -725,7 +722,7 @@ Authenticate user VPN access
 @app.route(f"/v{API_VERSION}/vpn_auth/<cert_cn>/<ip_address>", methods=["GET"])
 def api_auth_vpn_access(cert_cn, ip_address):
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT vpn_keys.expires_at, vpn_keys.status, vpn_keys.user_id, users.username, users.deleted_at FROM vpn_keys INNER JOIN users ON vpn_keys.user_id = users.id WHERE vpn_keys.uuid = %s", (cert_cn,))
         result = cursor.fetchall()
     except Exception:
@@ -761,9 +758,9 @@ def api_auth_vpn_access(cert_cn, ip_address):
 
     if not ip_address_found:
         try:
-            cursor = cnx.cursor()
+            cursor = g.db_conn.cursor()
             cursor.execute("INSERT INTO mfa_requests(created_at, updated_at, user_id, service, remote_ip) VALUES(NOW(), NOW(), %s, 'vpn', %s)", (user_id, ip_address))
-            cnx.commit()
+            g.db_conn.commit()
         except Exception:
             sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}:\n")
             sys.stderr.write(traceback.format_exc())
@@ -796,9 +793,9 @@ def api_auth_ssh_access(username, ip_address):
 
     if not ip_address_found:
         try:
-            cursor = cnx.cursor()
+            cursor = g.db_conn.cursor()
             cursor.execute("INSERT INTO mfa_requests(created_at, updated_at, user_id, service, remote_ip) VALUES(NOW(), NOW(), %s, 'ssh', %s)", (user_id, ip_address))
-            cnx.commit()
+            g.db_conn.commit()
         except Exception:
             sys.stderr.write(f"Failed storing mfa_request for {username} at {ip_address}:\n")
             sys.stderr.write(traceback.format_exc())
@@ -812,7 +809,7 @@ Update users table
 @app.route(f"/v{API_VERSION}/maint/update_users", methods=["POST"])
 def api_update_users():
     try:
-        cursor = cnx.cursor(dictionary=True)
+        cursor = g.db_conn.cursor(dictionary=True)
         cursor.execute("SELECT username, display_name, email, deleted_at FROM users")
         db_users = cursor.fetchall()
     except Exception:
@@ -820,7 +817,7 @@ def api_update_users():
         sys.stderr.write(traceback.format_exc())
         return flask_response({"status": "ERROR", "detail": "Failed getting users"}, 500)
 
-    cursor = cnx.cursor()
+    cursor = g.db_conn.cursor()
 
     if not init_ldap():
         return flask_response({"status": "ERROR", "detail": "Failed LDAP connection"}, 500)
@@ -847,7 +844,7 @@ def api_update_users():
             cursor.execute("UPDATE users SET updated_at = NOW(), email = %s WHERE username = %s", (user_ad["mail"][0], username))
             changes += 1
 
-    cnx.commit()
+    g.db_conn.commit()
     return flask_response({"status": "OK", "changes": changes})
 
 '''
