@@ -47,6 +47,9 @@ def auth_vpn_mfa_bypass(cert_cn, remote_ip):
     except Exception:
         return False
     
+    if bypass_addresses == None:
+        return False
+    
     if not remote_ip in bypass_addresses:
         return False
     
