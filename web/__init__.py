@@ -80,7 +80,7 @@ Get a user's details from LDAP
 def get_ldap_user(username):
     global ldapc
     result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)(sAMAccountName={username}))", ["mail", "givenName", "sn", "userAccountControl"]))
-    if result[1] == []:
+    if result[1] == [] or result[1][0][0] == None:
         return {}
 
     if "mail" not in result[1][0][1]:
