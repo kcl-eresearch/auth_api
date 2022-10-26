@@ -79,7 +79,7 @@ Get a user's details from LDAP
 '''
 def get_ldap_user(username):
     global ldapc
-    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)(sAMAccountName={username}))", ["mail", "givenName", "sn", "userAccountControl"]))
+    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)(sAMAccountName={username}))", ["mail", "givenName", "sn", "userAccountControl", "sAMAccountName"]))
     if result[1] == [] or result[1][0][0] == None:
         return {}
 
@@ -92,7 +92,11 @@ def get_ldap_user(username):
 Retrieve sane display name from user LDAP entry
 '''
 def format_name(user_entry):
-    return (user_entry["givenName"][0] + b" " + user_entry["sn"][0]).strip(b" -")
+    if "givenName" in user_entry and "sn" in user_entry:
+        return (user_entry["givenName"][0] + b" " + user_entry["sn"][0]).strip(b" -")
+    elif "displayName" in user_entry:
+        return user_entry["displayName"][0]
+    return user_entry["sAMAccountName"][0]
 
 '''
 Get ID from database of relevant user - creating new entry if required
