@@ -1,6 +1,7 @@
 from cryptography.hazmat.backends import default_backend
 from cryptography import x509
 from flask import g
+from ldap import filter
 import datetime
 import flask
 import jinja2
@@ -79,7 +80,8 @@ Get a user's details from LDAP
 '''
 def get_ldap_user(username):
     global ldapc
-    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, f"(&(objectClass=user)(sAMAccountName={username}))", ["mail", "givenName", "sn", "userAccountControl", "sAMAccountName"]))
+    filter = "(&(objectClass=user)(sAMAccountName=%s)(!(memberOf:1.2.840.113556.1.4.1941:=%s)))" % (username, ldap.filter.escape_filter_chars(config["ldap"]["blocked_users_group"]))
+    result = ldapc.result(ldapc.search(config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, filter, ["mail", "givenName", "sn", "userAccountControl", "sAMAccountName"]))
     if result[1] == [] or result[1][0][0] == None:
         return {}
 
