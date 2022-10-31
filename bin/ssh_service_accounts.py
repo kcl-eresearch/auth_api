@@ -60,10 +60,11 @@ except Exception as e:
     log_error("Invalid user specified")
     sys.exit(1)
 
-if "service_account_restrict" in config:
+if "service_account_restrict_users" in config and user.pw_name in config["service_account_restrict_users"]:
+    ip_allowed = config["service_account_restrict_users"][user.pw_name]
+elif "service_account_restrict" in config:
     ip_allowed = config["service_account_restrict"]
 else:
-    # Handle misconfiguration
     ip_allowed = ["127.0.0.0/8"]
 
 ip_allowed_csv = ",".join(ip_allowed)
