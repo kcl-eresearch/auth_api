@@ -83,7 +83,7 @@ remote_ip = None
 for conn in psutil.net_connections(kind="tcp"):
     if conn.laddr[1] == 22 and conn.status == psutil.CONN_ESTABLISHED:
         proc = psutil.Process(conn.pid)
-        if proc.ppid() == ppid:
+        if proc.ppid() == ppid and proc.username() == "sshd":
             remote_ip = conn.raddr[0]
             break
 
