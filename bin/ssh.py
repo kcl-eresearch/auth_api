@@ -82,9 +82,6 @@ except Exception as e:
 remote_ip = None
 for conn in psutil.net_connections(kind="tcp"):
     if conn.laddr[1] == 22 and conn.status == psutil.CONN_ESTABLISHED:
-        if conn.pid == ppid:
-            remote_ip = conn.raddr[0]
-            break
         proc = psutil.Process(conn.pid)
         if proc.ppid() == ppid:
             remote_ip = conn.raddr[0]
