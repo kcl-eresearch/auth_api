@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import json
 import os
 import pwd
 import psutil
@@ -19,6 +20,7 @@ def log_info(message):
 def get_ssh_keys(username, remote_ip):
     url = f"https://{config['host']}/v{API_VERSION}/ssh_auth/{username}/{remote_ip}"
     timeout = time.time() + config["timeout"]
+    log_info("Processing auth request: %s" % json.dumps({"username": username, "remote_ip": remote_ip, "pid": os.getpid(), "ppid": ppid}))
     while time.time() < timeout:
         try:
             r = requests.get(url, auth=(config["username"], config["password"]))
