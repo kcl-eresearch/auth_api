@@ -159,7 +159,7 @@ def get_user_ssh_keys(username):
 
     try:
         cursor = g.db_conn.cursor(dictionary=True)
-        cursor.execute("SELECT created_at, name, type, pub_key FROM ssh_keys WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT created_at, name, type, pub_key, allowed_ips, access_type FROM ssh_keys WHERE user_id = %s", (user_id,))
         result = cursor.fetchall()
     except Exception:
         sys.stderr.write(f"Error getting ssh keys for {username}:\n")
