@@ -3,6 +3,7 @@
 # Version of ssh.py which just returns all SSH keys for a user
 # For use on "legacy" hosts without doing web MFA
 
+import json
 import os
 import pwd
 import requests
@@ -42,6 +43,9 @@ def get_ssh_keys(username):
         return []
 
 API_VERSION = 1
+CMD_RSYNC = "/usr/bin/rrsync /"
+CMD_SFTP="internal-sftp"
+CMD_BOGUS="/usr/sbin/nologin"
 
 try:
     with open("/etc/auth_api.yaml") as fh:
@@ -67,6 +71,27 @@ os.setgroups([])
 os.setuid(pwentry.pw_uid)
 
 for key in get_ssh_keys(user.pw_name):
-    print(f"{key['type']} {key['pub_key']}")
+    restrictions = []
+    if key["allowed_ips"]:
+        try:
+            allowed_ips = ",".join(json.loads(key["allowed_ips"]))
+        except: # Play it safe and don't allow key if invalid allowed_ips
+            continue
+        restrictions.append("from=\"%s\"" % allowed_ips)
+
+    if key["access_type"] != "any":
+        restrictions.append("restrict")
+
+        if key["access_type"] == "rsync":
+            command = CMD_RSYNC
+        elif key["access_type"] == "sftp":
+            command = CMD_SFTP
+        else:
+            command = CMD_BOGUS
+
+        restrictions.append("command=\"%s\"" % command)
+
+    print((" ".join([",".join(restrictions), key["type"], key["pub_key"]])).strip())
+
 
 sys.stdout.flush()
