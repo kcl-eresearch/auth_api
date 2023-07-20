@@ -341,8 +341,9 @@ def auth_request(path, method, user):
             ("mfa_requests", "POST")
         ],
         config["main"]["auth_user_bastion"]: [
-            ("ssh_keys", "GET"),
             ("ssh_auth", "GET"),
+            ("ssh_auth_no_mfa", "GET"),
+            ("ssh_keys", "GET"),
             ("vpn_auth", "GET")
         ],
         config["main"]["auth_user_maint"]: [
@@ -807,6 +808,47 @@ def api_auth_ssh_access(username, ip_address):
             return flask_response({"status": "ERROR", "detail": "Failed storing MFA request"}, 500)
 
     return flask_response({"status": "OK", "result": "PENDING", "reason": "MFA not approved"})
+
+'''
+Authenticate user SSH access without MFA
+'''
+@app.route(f"/v{API_VERSION}/ssh_auth_no_mfa/<username>", methods=["GET"])
+def api_auth_ssh_access_no_mfa(username):
+    keys = get_user_ssh_keys(username)
+    if keys == False:
+        return flask_response({"status": "ERROR", "detail": "SSH key retrieval failed"}, 500)
+
+    is_service_account = False
+    for regex in config["main"]["service_account_regex"]:
+        if re.match(regex, username):
+            is_service_account = True
+    if is_service_account:
+        valid_keys = []
+        for key in keys:
+            if key["access_type"] == "any":
+                continue
+
+            if key["allowed_ips"] == None:
+                continue
+
+            try:
+                allowed_ips = json.loads(key["allowed_ips"])
+            except:
+                continue
+
+            if type(allowed_ips) != list:
+                continue
+
+            if len(allowed_ips) == 0:
+                continue
+
+            valid_keys.append(key)
+
+    else:
+        valid_keys = keys
+
+    return flask_response({"status": "OK", "keys": make_serializable(valid_keys)})
+
 
 '''
 Update users table
