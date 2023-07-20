@@ -19,7 +19,7 @@ def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
 
 def get_ssh_keys(username):
-    url = f"https://{config['host']}/v{API_VERSION}/ssh_keys/{username}"
+    url = f"https://{config['host']}/v{API_VERSION}/ssh_auth_no_mfa/{username}"
     try:
         r = requests.get(url, auth=(config["username"], config["password"]))
         if r.status_code == 200:
