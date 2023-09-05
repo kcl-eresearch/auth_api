@@ -79,6 +79,11 @@ for key in get_ssh_keys(user.pw_name):
             continue
         restrictions.append("from=\"%s\"" % allowed_ips)
 
+    else:
+        if os.path.basename(sys.argv[0]) == "ssh_tre_sftp.py":
+            continue
+
+    command = None
     if key["access_type"] != "any":
         restrictions.append("restrict")
 
@@ -91,7 +96,9 @@ for key in get_ssh_keys(user.pw_name):
 
         restrictions.append("command=\"%s\"" % command)
 
-    print((" ".join([",".join(restrictions), key["type"], key["pub_key"]])).strip())
+        if os.path.basename(sys.argv[0]) == "ssh_tre_sftp.py" and command != CMD_SFTP:
+            continue
 
+    print((" ".join([",".join(restrictions), key["type"], key["pub_key"]])).strip())
 
 sys.stdout.flush()
