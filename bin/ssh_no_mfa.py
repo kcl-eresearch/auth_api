@@ -44,8 +44,9 @@ def get_ssh_keys(username):
 
 API_VERSION = 1
 CMD_RSYNC = "/usr/bin/rrsync /"
-CMD_SFTP="internal-sftp"
-CMD_BOGUS="/usr/sbin/nologin"
+CMD_SFTP = "internal-sftp"
+CMD_BOGUS = "/usr/sbin/nologin"
+SCRIPT_NAME = os.path.basename(sys.argv[0]).split(".")[0]
 
 try:
     with open("/etc/auth_api.yaml") as fh:
@@ -71,6 +72,12 @@ os.setgroups([])
 os.setuid(pwentry.pw_uid)
 
 for key in get_ssh_keys(user.pw_name):
+    if SCRIPT_NAME == "ssh_tre_sftp" and key["access_type"] != "sftp":
+        continue
+
+    if SCRIPT_NAME == "ssh_ro_sftp" and key["access_type"] != "sftp_ro":
+        continue
+
     restrictions = []
     if key["allowed_ips"]:
         try:
@@ -78,9 +85,8 @@ for key in get_ssh_keys(user.pw_name):
         except: # Play it safe and don't allow key if invalid allowed_ips
             continue
         restrictions.append("from=\"%s\"" % allowed_ips)
-
     else:
-        if os.path.basename(sys.argv[0]) == "ssh_tre_sftp.py":
+        if SCRIPT_NAME == "ssh_tre_sftp":
             continue
 
     command = None
@@ -95,9 +101,6 @@ for key in get_ssh_keys(user.pw_name):
             command = CMD_BOGUS
 
         restrictions.append("command=\"%s\"" % command)
-
-        if os.path.basename(sys.argv[0]) == "ssh_tre_sftp.py" and command != CMD_SFTP:
-            continue
 
     print((" ".join([",".join(restrictions), key["type"], key["pub_key"]])).strip())
 
