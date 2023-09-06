@@ -43,8 +43,12 @@ def get_ssh_keys(username):
         return []
 
 API_VERSION = 1
-CMD_RSYNC = "/usr/bin/rrsync /"
-CMD_SFTP = "internal-sftp"
+CMD_MAP = {
+    "rsync": "/usr/bin/rrsync /",
+    "rsync_ro": "/usr/bin/rrsync -ro /",
+    "sftp": "internal-sftp",
+    "sftp_ro": "internal-sftp -R"
+}
 CMD_BOGUS = "/usr/sbin/nologin"
 SCRIPT_NAME = os.path.basename(sys.argv[0]).split(".")[0]
 
@@ -93,10 +97,8 @@ for key in get_ssh_keys(user.pw_name):
     if key["access_type"] != "any":
         restrictions.append("restrict")
 
-        if key["access_type"] == "rsync":
-            command = CMD_RSYNC
-        elif key["access_type"] == "sftp":
-            command = CMD_SFTP
+        if key["access_type"] in CMD_MAP:
+            command = CMD_MAP[key["access_type"]]
         else:
             command = CMD_BOGUS
 
