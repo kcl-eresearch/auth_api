@@ -622,10 +622,6 @@ def api_set_user_ssh_keys(username):
     if not isinstance(ssh_keys, dict):
         return flask_response({"status": "ERROR", "detail": "Invalid key list"}, 400)
 
-    if "access_type" in key and key["access_type"] != "any":
-        if "allowed_ips" not in key or key["allowed_ips"] in [None, "", []]:
-            return flask_response({"status": "ERROR", "detail": "Invalid allowed_ips for service account"}, 400)
-
     try:
         cursor = g.db_conn.cursor()
         for name, key in ssh_keys.items():
@@ -640,6 +636,10 @@ def api_set_user_ssh_keys(username):
 
             if not validate_ssh_key(key["type"], key["pub_key"], name):
                 return flask_response({"status": "ERROR", "detail": "Invalid key data"}, 400)
+
+            if "access_type" in key and key["access_type"] != "any":
+                if "allowed_ips" not in key or key["allowed_ips"] in [None, "", []]:
+                    return flask_response({"status": "ERROR", "detail": "Invalid allowed_ips for service account"}, 400)
 
             if name not in existing_named or existing_named[name]["type"] != key["type"] or existing_named[name]["pub_key"] != key["pub_key"]:
                 cursor.execute("DELETE FROM ssh_keys WHERE user_id = %s AND name = %s", (user_id, name))
