@@ -623,7 +623,7 @@ def api_set_user_ssh_keys(username):
         return flask_response({"status": "ERROR", "detail": "Invalid key list"}, 400)
 
     if "access_type" in key and key["access_type"] != "any":
-        if allowed_ips not in key or key["allowed_ips"] in [None, "", []]:
+        if "allowed_ips" not in key or key["allowed_ips"] in [None, "", []]:
             return flask_response({"status": "ERROR", "detail": "Invalid allowed_ips for service account"}, 400)
 
     try:
