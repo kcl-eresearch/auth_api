@@ -796,9 +796,9 @@ def api_auth_ssh_access(username, ip_address):
     ip_address_found = False
     mfa_requests = get_mfa_requests(username, "ssh")
     for request in mfa_requests:
-        if request["remote_ip"] == ip_address:
+        if request["remote_ip"] == ip_address and (request["expires_at"] == None or request["expires_at"] > datetime.datetime.now()):
             ip_address_found = True
-            if request["status"] == "approved" and request["expires_at"] > datetime.datetime.now():
+            if request["status"] == "approved":
                 keys = get_user_ssh_keys(username)
                 if keys == False:
                     return flask_response({"status": "ERROR", "detail": "SSH key retrieval failed"}, 500)
