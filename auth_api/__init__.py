@@ -9,6 +9,7 @@ logger.addHandler(handler)
 from dotenv import load_dotenv
 from flask import Flask, g
 from flaskext.mysql import MySQL
+from auth_api.common import get_config
 
 def create_app():
     load_dotenv()
@@ -17,6 +18,11 @@ def create_app():
 
     mysql = MySQL()
     mysql.init_app(app)
+
+    app.config['authapi'] = get_config("/etc/auth_api/main.yaml")
+    app.config['smtp'] = get_config("/etc/auth_api/smtp.yaml")
+    app.config['ldap'] = get_config("/etc/auth_api/ldap.yaml")
+    app.config['ca'] = get_config("/etc/auth_api/ca.yaml")
 
     app.config['MYSQL_DATABASE_HOST'] = os.getenv("MYSQL_DATABASE_HOST")
     app.config['MYSQL_DATABASE_USER'] = os.getenv("MYSQL_DATABASE_USER")
@@ -29,6 +35,14 @@ def create_app():
     from auth_api.views.api import api_v1
 
     app.register_blueprint(api_v1)
+
+
+    '''
+    Handle 404s (though normally should get permissions error first)
+    '''
+    @app.errorhandler(404)
+    def api_not_found(e):
+        return "Not found", 404
 
     @app.teardown_appcontext
     def close_connection(exception):
