@@ -6,19 +6,13 @@ import pwd
 import re
 import requests
 import sys
-import syslog
 import time
 import yaml
 
+from flask import Blueprint
+from auth_api.common import log_error, log_info, get_config
 
-def log_error(message):
-    syslog.syslog(syslog.LOG_ERR | syslog.LOG_AUTHPRIV, message)
-    sys.stderr.write(f"{message}\n")
-
-
-def log_info(message):
-    syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
-
+cli_vpn = Blueprint('vpn', __name__)
 
 def auth_vpn_group(username):
     openvpn_groups = []
@@ -65,12 +59,14 @@ def auth_vpn_mfa_bypass(cert_cn, remote_ip):
 
 
 def auth_vpn_access(cert_cn, remote_ip):
-    url = f"https://{config['host']}/v{API_VERSION}/vpn_auth/{cert_cn}/{remote_ip}"
+    config = get_config("/etc/auth_api.yaml")
+
+    url = f"https://{config['host']}/v1/vpn_auth/{cert_cn}/{remote_ip}"
     timeout = time.time() + config["timeout"]
 
     if auth_vpn_mfa_bypass(cert_cn, remote_ip):
         log_info(
-            f"Accepting authentication from {remote_ip} with certificate {cert_cn} - MFA bypass"
+            f"Accepting authe ,vntication from {remote_ip} with certificate {cert_cn} - MFA bypass"
         )
         return 0
 
@@ -121,39 +117,34 @@ def auth_vpn_access(cert_cn, remote_ip):
     return 1
 
 
-API_VERSION = 1
+@cli_vpn.cli.command('vpn')
+def vpn():
+    config = get_config("/etc/auth_api.yaml")
 
-try:
-    with open("/etc/auth_api.yaml") as fh:
-        config = yaml.safe_load(fh)
-except Exception as e:
-    log_error(f"Failed loading config: {e}")
-    sys.exit(1)
+    pwentry = pwd.getpwnam(config["run_as"])
+    os.setgid(pwentry.pw_gid)
+    os.setgroups([])
+    os.setuid(pwentry.pw_uid)
 
-pwentry = pwd.getpwnam(config["run_as"])
-os.setgid(pwentry.pw_gid)
-os.setgroups([])
-os.setuid(pwentry.pw_uid)
+    if "common_name" not in os.environ:
+        log_error("No common_name provided")
+        sys.exit(1)
 
-if "common_name" not in os.environ:
-    log_error("No common_name provided")
-    sys.exit(1)
+    if not re.match(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        os.environ["common_name"],
+    ):
+        log_error(f"Invalid common_name {os.environ['common_name']}")
+        sys.exit(1)
 
-if not re.match(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-    os.environ["common_name"],
-):
-    log_error(f"Invalid common_name {os.environ['common_name']}")
-    sys.exit(1)
+    if "trusted_ip" not in os.environ:
+        log_error("No trusted_ip provided")
+        sys.exit(1)
 
-if "trusted_ip" not in os.environ:
-    log_error("No trusted_ip provided")
-    sys.exit(1)
+    if not re.match(
+        r"^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$", os.environ["trusted_ip"]
+    ):
+        log_error("Invalid trusted_ip {os.environ['trusted_ip']}")
+        sys.exit(1)
 
-if not re.match(
-    r"^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$", os.environ["trusted_ip"]
-):
-    log_error("Invalid trusted_ip {os.environ['trusted_ip']}")
-    sys.exit(1)
-
-sys.exit(auth_vpn_access(os.environ["common_name"], os.environ["trusted_ip"]))
+    sys.exit(auth_vpn_access(os.environ["common_name"], os.environ["trusted_ip"]))

@@ -13,7 +13,7 @@ import yaml
 from flask import Blueprint, current_app
 from auth_api.common import log_error, log_info, get_ssh_keys, get_config
 
-bp = Blueprint('ssh', __name__)
+cli_ssh = Blueprint('ssh', __name__)
 
 def get_ssh_auth(username, remote_ip):
     config = get_config("/etc/auth_api.yaml")
@@ -95,7 +95,7 @@ def get_ssh_keys(username, subcmd = "ssh_keys"):
         log_error(f"Failed fetching {url}: {e}")
         return []
 
-@bp.cli.command('ssh')
+@cli_ssh.cli.command('ssh')
 @click.argument('username')
 def ssh(username):
     CMD_RSYNC = "/usr/bin/rrsync /"
@@ -163,7 +163,7 @@ def ssh(username):
 
     sys.stdout.flush()
 
-@bp.cli.command('ssh_get_keys_yaml')
+@cli_ssh.cli.command('ssh_get_keys_yaml')
 @click.argument('username')
 def ssh_get_keys_yaml(username):
     config = get_config("/etc/auth_api.yaml")
@@ -242,22 +242,22 @@ def no_mfa_subcmd(username, scriptname):
     sys.stdout.flush()
 
 
-@bp.cli.command('ssh_no_mfa')
+@cli_ssh.cli.command('ssh_no_mfa')
 @click.argument('username')
 def ssh_no_mfa(username):
     no_mfa_subcmd(username, "ssh_no_mfa")
 
-@bp.cli.command('ssh_tre_sftp')
+@cli_ssh.cli.command('ssh_tre_sftp')
 @click.argument('username')
 def ssh_tre_sftp(username):
     no_mfa_subcmd(username, "ssh_tre_sftp")
 
-@bp.cli.command('ssh_ro_sftp')
+@cli_ssh.cli.command('ssh_ro_sftp')
 @click.argument('username')
 def ssh_ro_sftp(username):
     no_mfa_subcmd(username, "ssh_ro_sftp")
 
-@bp.cli.command('ssh_service_accounts')
+@cli_ssh.cli.command('ssh_service_accounts')
 @click.argument('username')
 def ssh_service_accounts(username):
     config = get_config("/etc/auth_api.yaml")
@@ -291,7 +291,7 @@ def ssh_service_accounts(username):
 
     sys.stdout.flush()
 
-@bp.cli.command('ssh_slurm')
+@cli_ssh.cli.command('ssh_slurm')
 @click.argument('username')
 def ssh_slurm(username):
     try:

@@ -40,8 +40,19 @@ def create_app():
 
     # Register the API.
     from auth_api.views.api import api_v1
-
     app.register_blueprint(api_v1)
+
+    # Register the SSH CLI.
+    from auth_api.commands.ssh import cli_ssh
+    app.register_blueprint(cli_ssh)
+
+    # Register the VPN CLI.
+    from auth_api.commands.vpn import cli_vpn
+    app.register_blueprint(cli_vpn)
+
+    # Register the admin CLI.
+    from auth_api.commands.admin import cli_admin
+    app.register_blueprint(cli_admin)
 
     @app.teardown_appcontext
     def close_connection(exception):
