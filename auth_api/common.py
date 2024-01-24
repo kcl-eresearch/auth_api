@@ -94,8 +94,7 @@ def send_email(username, service):
     smtp_config = current_app.config["smtp"]
 
     try:
-        template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../templates"))
-        with open(os.path.join(template_path, "mail_template.j2")) as fh:
+        with open(os.path.join(current_app.config['templates_path'], "mail_template.j2")) as fh:
             mail_template = jinja2.Template(fh.read())
     except Exception:
         sys.stderr.write("Failed loading mail template:\n")

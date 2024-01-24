@@ -19,6 +19,8 @@ def create_app():
     mysql = MySQL()
     mysql.init_app(app)
 
+    app.config['migrations_path'] = os.path.abspath(os.path.join(os.path.dirname(__file__), "../db/migrations"))
+    app.config['templates_path'] = os.path.abspath(os.path.join(os.path.dirname(__file__), "../templates"))
     app.config['authapi'] = get_config("/etc/auth_api/main.yaml")
     app.config['smtp'] = get_config("/etc/auth_api/smtp.yaml")
     app.config['ldap'] = get_config("/etc/auth_api/ldap.yaml")
@@ -29,20 +31,12 @@ def create_app():
     app.config['MYSQL_DATABASE_PASSWORD'] = os.getenv("MYSQL_DATABASE_PASSWORD")
     app.config['MYSQL_DATABASE_DB'] = os.getenv("MYSQL_DATABASE_DB")
 
-    migrate_database(mysql)
+    migrate_database(mysql, app.config['migrations_path'])
 
     # Register the API.
     from auth_api.views.api import api_v1
 
     app.register_blueprint(api_v1)
-
-
-    '''
-    Handle 404s (though normally should get permissions error first)
-    '''
-    @app.errorhandler(404)
-    def api_not_found(e):
-        return "Not found", 404
 
     @app.teardown_appcontext
     def close_connection(exception):
@@ -52,7 +46,7 @@ def create_app():
 
     return app
 
-def migrate_database(mysql):
+def migrate_database(mysql, migrations_path):
     with mysql.connect() as db:
         if not db:
             raise Exception("Could not connect to database")
@@ -64,8 +58,7 @@ def migrate_database(mysql):
             cursor.execute("SELECT migration FROM migrations")
             migrations = cursor.fetchall()
 
-        # Get a list of migration files in ../../db/migrations
-        migrations_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../db/migrations"))
+        # Get a list of migration files.
         migration_files = os.listdir(migrations_path)
         migration_files = [f for f in migration_files if f.endswith(".sql")]
         migration_files.sort()
