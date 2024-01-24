@@ -10,17 +10,30 @@ import syslog
 import time
 import yaml
 
+
 def log_error(message):
     syslog.syslog(syslog.LOG_ERR | syslog.LOG_AUTHPRIV, message)
     sys.stderr.write(f"{message}\n")
 
+
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
+
 
 def get_ssh_keys(username, remote_ip):
     url = f"https://{config['host']}/v{API_VERSION}/ssh_auth/{username}/{remote_ip}"
     timeout = time.time() + config["timeout"]
-    log_info("Processing auth request: %s" % json.dumps({"username": username, "remote_ip": remote_ip, "pid": os.getpid(), "ppid": ppid}))
+    log_info(
+        "Processing auth request: %s"
+        % json.dumps(
+            {
+                "username": username,
+                "remote_ip": remote_ip,
+                "pid": os.getpid(),
+                "ppid": ppid,
+            }
+        )
+    )
     while time.time() < timeout:
         try:
             r = requests.get(url, auth=(config["username"], config["password"]))
@@ -29,11 +42,15 @@ def get_ssh_keys(username, remote_ip):
                     response = r.json()
                     if response["status"] == "OK":
                         if response["result"] == "ACCEPT":
-                            log_info(f"Accepting authentication for {username} from {remote_ip}: {len(response['keys'])} keys")
+                            log_info(
+                                f"Accepting authentication for {username} from {remote_ip}: {len(response['keys'])} keys"
+                            )
                             return response["keys"]
 
                         if response["result"] == "REJECT":
-                            log_info(f"Rejecting authentication for {username} from {remote_ip}: {response['reason']}")
+                            log_info(
+                                f"Rejecting authentication for {username} from {remote_ip}: {response['reason']}"
+                            )
                             return []
 
                         if response["result"] == "PENDING":
@@ -54,10 +71,11 @@ def get_ssh_keys(username, remote_ip):
     log_info(f"Rejecting authentication for {username} from {remote_ip}: timeout")
     return []
 
+
 API_VERSION = 1
 CMD_RSYNC = "/usr/bin/rrsync /"
-CMD_SFTP="internal-sftp"
-CMD_BOGUS="/usr/sbin/nologin"
+CMD_SFTP = "internal-sftp"
+CMD_BOGUS = "/usr/sbin/nologin"
 
 try:
     with open("/etc/auth_api.yaml") as fh:
@@ -105,9 +123,9 @@ for key in get_ssh_keys(user.pw_name, remote_ip):
     if key["allowed_ips"]:
         try:
             allowed_ips = ",".join(json.loads(key["allowed_ips"]))
-        except: # Play it safe and don't allow key if invalid allowed_ips
+        except:  # Play it safe and don't allow key if invalid allowed_ips
             continue
-        restrictions.append("from=\"%s\"" % allowed_ips)
+        restrictions.append('from="%s"' % allowed_ips)
 
     if key["access_type"] != "any":
         restrictions.append("restrict")
@@ -119,7 +137,7 @@ for key in get_ssh_keys(user.pw_name, remote_ip):
         else:
             command = CMD_BOGUS
 
-        restrictions.append("command=\"%s\"" % command)
+        restrictions.append('command="%s"' % command)
 
     print((" ".join([",".join(restrictions), key["type"], key["pub_key"]])).strip())
 

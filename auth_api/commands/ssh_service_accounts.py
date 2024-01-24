@@ -10,12 +10,15 @@ import sys
 import syslog
 import yaml
 
+
 def log_error(message):
     syslog.syslog(syslog.LOG_ERR | syslog.LOG_AUTHPRIV, message)
     sys.stderr.write(f"{message}\n")
 
+
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
+
 
 def get_ssh_keys(username):
     url = f"https://{config['host']}/v{API_VERSION}/ssh_keys/{username}"
@@ -25,7 +28,9 @@ def get_ssh_keys(username):
             try:
                 response = r.json()
                 if response["status"] == "OK":
-                    log_info(f"Accepting authentication for {username}: {len(response['keys'])} keys")
+                    log_info(
+                        f"Accepting authentication for {username}: {len(response['keys'])} keys"
+                    )
                     return response["keys"]
 
                 log_error(f"Unexpected status from {url}: {response['status']}")
@@ -40,6 +45,7 @@ def get_ssh_keys(username):
     except Exception as e:
         log_error(f"Failed fetching {url}: {e}")
         return []
+
 
 API_VERSION = 1
 
@@ -60,7 +66,10 @@ except Exception as e:
     log_error("Invalid user specified")
     sys.exit(1)
 
-if "service_account_restrict_users" in config and user.pw_name in config["service_account_restrict_users"]:
+if (
+    "service_account_restrict_users" in config
+    and user.pw_name in config["service_account_restrict_users"]
+):
     ip_allowed = config["service_account_restrict_users"][user.pw_name]
 elif "service_account_restrict" in config:
     ip_allowed = config["service_account_restrict"]

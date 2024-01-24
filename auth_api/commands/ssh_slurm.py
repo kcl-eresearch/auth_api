@@ -10,12 +10,15 @@ import sys
 import syslog
 import yaml
 
+
 def log_error(message):
     syslog.syslog(syslog.LOG_ERR | syslog.LOG_AUTHPRIV, message)
     sys.stderr.write(f"{message}\n")
 
+
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
+
 
 def get_ssh_keys(username):
     url = f"https://{config['host']}/v{API_VERSION}/ssh_keys/{username}"
@@ -25,7 +28,9 @@ def get_ssh_keys(username):
             try:
                 response = r.json()
                 if response["status"] == "OK":
-                    log_info(f"Accepting authentication for {username}: {len(response['keys'])} keys")
+                    log_info(
+                        f"Accepting authentication for {username}: {len(response['keys'])} keys"
+                    )
                     return response["keys"]
 
                 log_error(f"Unexpected status from {url}: {response['status']}")
@@ -40,6 +45,7 @@ def get_ssh_keys(username):
     except Exception as e:
         log_error(f"Failed fetching {url}: {e}")
         return []
+
 
 API_VERSION = 1
 
@@ -61,7 +67,22 @@ except Exception as e:
     sys.exit(1)
 
 try:
-    result = subprocess.run(["/usr/bin/squeue", "-t", "running", "-u", user.pw_name, "-w", socket.gethostname().split(".")[0], "-h", "-o", "%u"], capture_output=True, check=True)
+    result = subprocess.run(
+        [
+            "/usr/bin/squeue",
+            "-t",
+            "running",
+            "-u",
+            user.pw_name,
+            "-w",
+            socket.gethostname().split(".")[0],
+            "-h",
+            "-o",
+            "%u",
+        ],
+        capture_output=True,
+        check=True,
+    )
 except Exception as e:
     log_error(f"Failed getting user slurm jobs: {e}")
     sys.exit(1)

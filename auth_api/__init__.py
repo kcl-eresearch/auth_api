@@ -2,14 +2,15 @@ import os
 import logging
 import logging.handlers
 
-logger = logging.getLogger('AuthAPI')
-handler = logging.handlers.SysLogHandler(address = '/dev/log')
+logger = logging.getLogger("AuthAPI")
+handler = logging.handlers.SysLogHandler(address="/dev/log")
 logger.addHandler(handler)
 
 from dotenv import load_dotenv
 from flask import Flask, g
 from flaskext.mysql import MySQL
 from auth_api.common import get_config
+
 
 def create_app():
     load_dotenv()
@@ -19,19 +20,23 @@ def create_app():
     mysql = MySQL()
     mysql.init_app(app)
 
-    app.config['migrations_path'] = os.path.abspath(os.path.join(os.path.dirname(__file__), "../db/migrations"))
-    app.config['templates_path'] = os.path.abspath(os.path.join(os.path.dirname(__file__), "../templates"))
-    app.config['authapi'] = get_config("/etc/auth_api/main.yaml")
-    app.config['smtp'] = get_config("/etc/auth_api/smtp.yaml")
-    app.config['ldap'] = get_config("/etc/auth_api/ldap.yaml")
-    app.config['ca'] = get_config("/etc/auth_api/ca.yaml")
+    app.config["migrations_path"] = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../db/migrations")
+    )
+    app.config["templates_path"] = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../templates")
+    )
+    app.config["authapi"] = get_config("/etc/auth_api/main.yaml")
+    app.config["smtp"] = get_config("/etc/auth_api/smtp.yaml")
+    app.config["ldap"] = get_config("/etc/auth_api/ldap.yaml")
+    app.config["ca"] = get_config("/etc/auth_api/ca.yaml")
 
-    app.config['MYSQL_DATABASE_HOST'] = os.getenv("MYSQL_DATABASE_HOST")
-    app.config['MYSQL_DATABASE_USER'] = os.getenv("MYSQL_DATABASE_USER")
-    app.config['MYSQL_DATABASE_PASSWORD'] = os.getenv("MYSQL_DATABASE_PASSWORD")
-    app.config['MYSQL_DATABASE_DB'] = os.getenv("MYSQL_DATABASE_DB")
+    app.config["MYSQL_DATABASE_HOST"] = os.getenv("MYSQL_DATABASE_HOST")
+    app.config["MYSQL_DATABASE_USER"] = os.getenv("MYSQL_DATABASE_USER")
+    app.config["MYSQL_DATABASE_PASSWORD"] = os.getenv("MYSQL_DATABASE_PASSWORD")
+    app.config["MYSQL_DATABASE_DB"] = os.getenv("MYSQL_DATABASE_DB")
 
-    migrate_database(mysql, app.config['migrations_path'])
+    migrate_database(mysql, app.config["migrations_path"])
 
     # Register the API.
     from auth_api.views.api import api_v1
@@ -40,11 +45,12 @@ def create_app():
 
     @app.teardown_appcontext
     def close_connection(exception):
-        db = getattr(g, '_database', None)
+        db = getattr(g, "_database", None)
         if db is not None:
             db.close()
 
     return app
+
 
 def migrate_database(mysql, migrations_path):
     with mysql.connect() as db:
@@ -52,7 +58,9 @@ def migrate_database(mysql, migrations_path):
             raise Exception("Could not connect to database")
 
         with db.cursor() as cursor:
-            cursor.execute("CREATE TABLE IF NOT EXISTS migrations(migration VARCHAR(255))")
+            cursor.execute(
+                "CREATE TABLE IF NOT EXISTS migrations(migration VARCHAR(255))"
+            )
 
         with db.cursor() as cursor:
             cursor.execute("SELECT migration FROM migrations")
@@ -71,5 +79,7 @@ def migrate_database(mysql, migrations_path):
                 with db.cursor() as cursor:
                     cursor.execute(sql)
                 with db.cursor() as cursor:
-                    cursor.execute("INSERT INTO migrations(migration) VALUES(%s)", [migration_file])
+                    cursor.execute(
+                        "INSERT INTO migrations(migration) VALUES(%s)", [migration_file]
+                    )
                 db.commit()

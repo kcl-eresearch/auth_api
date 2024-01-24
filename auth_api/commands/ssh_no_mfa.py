@@ -11,12 +11,15 @@ import sys
 import syslog
 import yaml
 
+
 def log_error(message):
     syslog.syslog(syslog.LOG_ERR | syslog.LOG_AUTHPRIV, message)
     sys.stderr.write(f"{message}\n")
 
+
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
+
 
 def get_ssh_keys(username):
     url = f"https://{config['host']}/v{API_VERSION}/ssh_auth_no_mfa/{username}"
@@ -26,7 +29,9 @@ def get_ssh_keys(username):
             try:
                 response = r.json()
                 if response["status"] == "OK":
-                    log_info(f"Accepting authentication for {username}: {len(response['keys'])} keys")
+                    log_info(
+                        f"Accepting authentication for {username}: {len(response['keys'])} keys"
+                    )
                     return response["keys"]
 
                 log_error(f"Unexpected status from {url}: {response['status']}")
@@ -42,12 +47,13 @@ def get_ssh_keys(username):
         log_error(f"Failed fetching {url}: {e}")
         return []
 
+
 API_VERSION = 1
 CMD_MAP = {
     "rsync": "/usr/bin/rrsync /",
     "rsync_ro": "/usr/bin/rrsync -ro /",
     "sftp": "internal-sftp",
-    "sftp_ro": "internal-sftp -R"
+    "sftp_ro": "internal-sftp -R",
 }
 CMD_BOGUS = "/usr/sbin/nologin"
 SCRIPT_NAME = os.path.basename(sys.argv[0]).split(".")[0]
@@ -86,9 +92,9 @@ for key in get_ssh_keys(user.pw_name):
     if key["allowed_ips"]:
         try:
             allowed_ips = ",".join(json.loads(key["allowed_ips"]))
-        except: # Play it safe and don't allow key if invalid allowed_ips
+        except:  # Play it safe and don't allow key if invalid allowed_ips
             continue
-        restrictions.append("from=\"%s\"" % allowed_ips)
+        restrictions.append('from="%s"' % allowed_ips)
     else:
         if SCRIPT_NAME == "ssh_tre_sftp":
             continue
@@ -102,7 +108,7 @@ for key in get_ssh_keys(user.pw_name):
         else:
             command = CMD_BOGUS
 
-        restrictions.append("command=\"%s\"" % command)
+        restrictions.append('command="%s"' % command)
 
     print((" ".join([",".join(restrictions), key["type"], key["pub_key"]])).strip())
 

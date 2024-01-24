@@ -10,8 +10,10 @@ import yaml
 
 from auth_api.common import api_get
 
+
 def log_error(message):
     sys.stderr.write(f"{message}\n")
+
 
 def get_ssh_keys(username):
     url = f"https://{config['host']}/v{API_VERSION}/ssh_keys/{username}"
@@ -35,6 +37,7 @@ def get_ssh_keys(username):
     except Exception as e:
         log_error(f"Failed fetching {url}: {e}")
         return []
+
 
 API_VERSION = 1
 

@@ -6,13 +6,16 @@ import sys
 import syslog
 import yaml
 
+
 def log_error(message):
     syslog.syslog(syslog.LOG_ERR, message)
     sys.stderr.write(f"{message}\n")
 
+
 def log_info(message):
     syslog.syslog(syslog.LOG_INFO, message)
     print(message)
+
 
 # Must be integer
 API_VERSION = 1

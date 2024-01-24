@@ -1,4 +1,3 @@
-
 import argparse
 import re
 import requests
@@ -17,6 +16,7 @@ from flaskext.mysql import MySQL
 
 API_VERSION = 1
 
+
 def get_db():
     mysql = MySQL()
     mysql.init_app(current_app)
@@ -27,6 +27,7 @@ def get_db():
         raise Exception("Could not connect to database")
     return db
 
+
 def get_config(filepath="/etc/auth_api.yaml"):
     try:
         with open(filepath) as fh:
@@ -36,15 +37,18 @@ def get_config(filepath="/etc/auth_api.yaml"):
         sys.exit(1)
     return config
 
+
 def validate_user(user):
     if re.match(r"^[a-z0-9]+$", user):
         return user
     raise argparse.ArgumentTypeError("Invalid user")
 
 
-'''
+"""
 Validate SSH public key
-'''
+"""
+
+
 def validate_ssh_key(type, pub_key, name):
     ssh_key = sshpubkeys.SSHKey(f"{type} {pub_key} {name}")
     try:
@@ -53,8 +57,9 @@ def validate_ssh_key(type, pub_key, name):
         return False
     return True
 
+
 def api_get(uri):
-    config = current_app.config['authapi']
+    config = current_app.config["authapi"]
 
     url = f"https://{config['host']}/v{API_VERSION}/{uri}"
     response = {}
@@ -70,9 +75,12 @@ def api_get(uri):
         sys.exit(1)
     return response
 
-'''
+
+"""
 Make list of dicts serializable - convert datetimes to unix timestamps
-'''
+"""
+
+
 def make_serializable(data):
     output = []
     for datum in data:
@@ -86,15 +94,19 @@ def make_serializable(data):
     return output
 
 
-'''
+"""
 Send email notification to user notifying of key changes
-'''
+"""
+
+
 def send_email(username, service):
     db = get_db()
     smtp_config = current_app.config["smtp"]
 
     try:
-        with open(os.path.join(current_app.config['templates_path'], "mail_template.j2")) as fh:
+        with open(
+            os.path.join(current_app.config["templates_path"], "mail_template.j2")
+        ) as fh:
             mail_template = jinja2.Template(fh.read())
     except Exception:
         sys.stderr.write("Failed loading mail template:\n")
@@ -103,7 +115,9 @@ def send_email(username, service):
 
     try:
         with db.cursor(dictionary=True) as cursor:
-            cursor.execute("SELECT display_name, email FROM users WHERE username = %s", (username,))
+            cursor.execute(
+                "SELECT display_name, email FROM users WHERE username = %s", (username,)
+            )
             result = cursor.fetchall()
     except Exception:
         sys.stderr.write("Failed retrieving user details from database:\n")
@@ -128,7 +142,7 @@ def send_email(username, service):
             display_name=result[0]["display_name"],
             user_email=result[0]["email"],
             service_name=service.upper(),
-            username=username
+            username=username,
         )
     except Exception:
         sys.stderr.write("Failed rendering mail message:\n")
