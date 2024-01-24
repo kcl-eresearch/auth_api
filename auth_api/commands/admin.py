@@ -2,38 +2,14 @@
 
 import argparse
 import datetime
-import os
-import pwd
-import re
-import requests
 import sys
 import tabulate
 import yaml
 
-def validate_user(user):
-    if re.match(r"^[a-z0-9]+$", user):
-        return user
-    raise argparse.ArgumentTypeError("Invalid user")
-
-def api_get(uri):
-    url = f"https://{config['host']}/v{API_VERSION}/{uri}"
-    response = {}
-    try:
-        r = requests.get(url, auth=(config["username"], config["password"]))
-        if r.status_code == 200:
-            response = r.json()
-        else:
-            sys.stderr.write("Could not retrieve data from API\n")
-            sys.exit(1)
-    except Exception as e:
-        sys.stderr.write(f"Failed fetching {uri}: {e}\n")
-        sys.exit(1)
-    return response
+from auth_api.common import api_get, validate_user
 
 def heading(string):
     print("%s\n%s" % (string, "=" * len(string)))
-
-API_VERSION = 1
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--user", type=validate_user)
@@ -46,13 +22,6 @@ if args.user and args.mfa:
 
 if not (args.user or args.mfa):
     sys.stderr.write("Please specify either --mfa or --user USER\n")
-    sys.exit(1)
-
-try:
-    with open("/etc/auth_api.yaml") as fh:
-        config = yaml.safe_load(fh)
-except Exception as e:
-    sys.stderr.write(f"Failed loading config: {e}\n")
     sys.exit(1)
 
 if args.user:

@@ -6,8 +6,9 @@ import os
 import pwd
 import requests
 import sys
-import syslog
 import yaml
+
+from auth_api.common import api_get
 
 def log_error(message):
     sys.stderr.write(f"{message}\n")

@@ -8,6 +8,12 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+pika = "^1.2.0"
+requests = "^2.26.0"
+Flask = "^2.2.3"
+flask-mysql = "^1.5.2"
+python-dotenv = "^1.0.0"
+cryptography = "^42.0.0"
 
 [tool.poetry.dev-dependencies]
 Sphinx = "^3.4.3"
