@@ -1,21 +1,29 @@
 import argparse
+import datetime
+import jinja2
+import os
 import re
 import requests
-import sys
-import yaml
-import datetime
-import sshpubkeys
-import jinja2
 import smtplib
+import sshpubkeys
 import ssl
-import os
+import sys
+import syslog
 import traceback
+import yaml
 
 from flask import current_app
 from flaskext.mysql import MySQL
 
 API_VERSION = 1
 
+def log_error(message):
+    syslog.syslog(syslog.LOG_ERR | syslog.LOG_AUTHPRIV, message)
+    sys.stderr.write(f"{message}\n")
+
+
+def log_info(message):
+    syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
 
 def get_db():
     mysql = MySQL()
