@@ -1,14 +1,12 @@
 from cryptography.hazmat.backends import default_backend
 from cryptography import x509
 from flask import g
-from ldap import filter
 import datetime
 import flask
 import jinja2
 import json
 import ldap
 import mysql.connector
-import os
 import re
 import shutil
 import smtplib

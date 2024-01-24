@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "auth-api"
+version = "0.1.0"
+description = "The authentication API used by e-Research Bastion (SSH and OpenVPN) services, linking those services plus a web interface to a MySQL database."
+authors = ["Xand Meaden <xand.meaden@kcl.ac.uk>", "Skylar Kelty <skylar.kelty@kcl.ac.uk>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+Sphinx = "^3.4.3"
+sphinx-rtd-theme = "^0.5.1"
+nose = "^1.3.7"
+black = "^23.1.0"
+mypy = "^1"
+pytest = "^6.2.2"
+pytest-cov = "^2.11.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
