@@ -15,7 +15,6 @@ from auth_api.user import *
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from flask import Blueprint, current_app, Response, request
-from flaskext.mysql import MySQL
 
 api_v1 = Blueprint("apiv1", __name__, url_prefix="/api/v1")
 

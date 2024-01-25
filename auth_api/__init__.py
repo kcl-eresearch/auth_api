@@ -24,7 +24,7 @@ def create_app():
         os.path.join(os.path.dirname(__file__), "../db/migrations")
     )
     app.config["templates_path"] = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../templates")
+        os.path.join(os.path.dirname(__file__), "templates")
     )
     app.config["authapi"] = get_config("/etc/auth_api/main.yaml")
     app.config["smtp"] = get_config("/etc/auth_api/smtp.yaml")
@@ -41,6 +41,10 @@ def create_app():
     # Register the API.
     from auth_api.views.api import api_v1
     app.register_blueprint(api_v1)
+
+    # Register the dashboard.
+    from auth_api.views.dashboard import dashboard
+    app.register_blueprint(dashboard)
 
     # Register the SSH CLI.
     from auth_api.commands.ssh import cli_ssh
