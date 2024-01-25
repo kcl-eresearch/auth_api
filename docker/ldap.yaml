@@ -1,0 +1,7 @@
+---
+host: localhost
+base_dn: DC=test,DC=ds,DC=localhost
+bind_dn: er_auth_api@test.ds.localhost
+bind_pw: testpw
+ca_file: "/etc/ssl/certs/ca-certificates.crt"
+blocked_users_group: CN=er_inactive,OU=groups,DC=test,DC=ds,DC=localhost

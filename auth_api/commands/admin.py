@@ -1,17 +1,15 @@
 #!/usr/bin/python3
 
-import argparse
 import click
 import datetime
 import sys
 import tabulate
-import yaml
 import requests
 import socket
 
 from auth_api.common import api_get, validate_user
-from flask import Blueprint, current_app
-from auth_api.common import log_error, log_info, get_ssh_keys, get_config
+from flask import Blueprint
+from auth_api.common import log_error, log_info, get_config
 
 cli_admin = Blueprint('admin', __name__)
 
@@ -21,7 +19,7 @@ def heading(string):
 
 @cli_admin.cli.command('admin')
 @click.option('-u', '--user', type=validate_user)
-@click.option("-m", "--mfa", action="store_true")
+@click.option("-m", "--mfa", is_flag=True)
 def admin(user, mfa):
     if user and mfa:
         sys.stderr.write("Cannot combine --user and --mfa options\n")

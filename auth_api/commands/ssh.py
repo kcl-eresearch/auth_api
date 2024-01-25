@@ -11,7 +11,7 @@ import time
 import yaml
 
 from flask import Blueprint, current_app
-from auth_api.common import log_error, log_info, get_ssh_keys, get_config
+from auth_api.common import log_error, log_info, get_config
 
 cli_ssh = Blueprint('ssh', __name__)
 

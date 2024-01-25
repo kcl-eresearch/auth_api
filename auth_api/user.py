@@ -4,7 +4,7 @@ import subprocess
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from auth_api.common import get_db
-from auth_api.auth_api.ldap import init_ldap, get_ldap_user, format_name
+from auth_api.ldap import init_ldap, get_ldap_user, format_name
 from flask import current_app
 
 """

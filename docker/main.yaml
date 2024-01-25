@@ -1,0 +1,18 @@
+---
+ssh_key_types:
+- ssh-rsa
+- ecdsa-sha2-nistp256
+- ecdsa-sha2-nistp384
+- ecdsa-sha2-nistp521
+- ssh-ed25519
+- sk-ecdsa-sha2-nistp256@openssh.com
+- sk-ssh-ed25519@openssh.com
+auth_user_web: er_auth_api_web
+auth_user_bastion: er_auth_api_bastion
+auth_user_maint: er_auth_api_maint
+auth_user_admin: er_auth_api_admin
+mfa_timeout:
+  approved: 10080
+  rejected: 30
+service_account_regex:
+- "^er_svc_"

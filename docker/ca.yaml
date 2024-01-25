@@ -1,0 +1,6 @@
+---
+exe: "/usr/bin/step"
+url: https://localhost/
+provisioner: admin
+cert_lifetime: 365
+root_crt: "/etc/ssl/certs/ssl-cert-snakeoil.pem"
