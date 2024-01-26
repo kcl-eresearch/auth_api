@@ -16,7 +16,7 @@ def get_user_id(username):
     db = get_db()
 
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT id, deleted_at FROM users WHERE username = %s", (username,)
             )
@@ -53,7 +53,7 @@ def get_user_id(username):
             )
         db.commit()
 
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
             result = cursor.fetchall()
     except Exception:
@@ -81,7 +81,7 @@ def get_user_ssh_keys(username):
         return False
 
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT created_at, name, type, pub_key, allowed_ips, access_type FROM ssh_keys WHERE user_id = %s",
                 (user_id,),
@@ -108,7 +108,7 @@ def get_user_vpn_keys(username):
         return False
 
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT created_at, expires_at, uuid, name, public_cert, status FROM vpn_keys WHERE user_id = %s",
                 (user_id,),
@@ -136,7 +136,7 @@ def revoke_vpn_key(username, key_name):
         return False
 
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT id, public_cert FROM vpn_keys WHERE status = 'active' AND user_id = %s AND name = %s",
                 (user_id, key_name),
@@ -206,7 +206,7 @@ def get_mfa_requests(username, service="all"):
     db = get_db()
     requests = []
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s AND (created_at > NOW() - INTERVAL 7 DAY OR expires_at > NOW())",
                 (user_id,),
@@ -233,7 +233,7 @@ def get_mfa_requests_all(service="all"):
     db = get_db()
     requests = []
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT users.username, mfa_requests.created_at, mfa_requests.updated_at, mfa_requests.expires_at, mfa_requests.service, mfa_requests.remote_ip, mfa_requests.status FROM mfa_requests INNER JOIN users ON mfa_requests.user_id = users.id WHERE expires_at IS NULL OR expires_at > NOW()"
             )

@@ -129,7 +129,7 @@ def api_status():
     table_counts = {}
     for table in ["users", "mfa_requests", "ssh_keys", "vpn_keys"]:
         try:
-            with db.cursor(dictionary=True) as cursor:
+            with db.cursor() as cursor:
                 cursor.execute(f"SELECT COUNT(*) AS table_count FROM {table}")
                 result = cursor.fetchall()
         except Exception as e:
@@ -584,7 +584,7 @@ Authenticate user VPN access
 def api_auth_vpn_access(cert_cn, ip_address):
     db = get_db()
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT vpn_keys.expires_at, vpn_keys.status, vpn_keys.user_id, users.username, users.deleted_at FROM vpn_keys INNER JOIN users ON vpn_keys.user_id = users.id WHERE vpn_keys.uuid = %s",
                 (cert_cn,),
@@ -801,7 +801,7 @@ Update users table
 def api_update_users():
     db = get_db()
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT username, display_name, email, deleted_at FROM users"
             )

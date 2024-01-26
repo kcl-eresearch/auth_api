@@ -26,11 +26,9 @@ def log_info(message):
     syslog.syslog(syslog.LOG_INFO | syslog.LOG_AUTHPRIV, message)
 
 def get_db():
-    mysql = MySQL()
-    mysql.init_app(current_app)
-    db = mysql.get_db()
+    db = current_app.db.get_db()
     if not db:
-        db = mysql.connect()
+        db = current_app.db.connect()
     if not db:
         raise Exception("Could not connect to database")
     return db
@@ -122,7 +120,7 @@ def send_email(username, service):
         return False
 
     try:
-        with db.cursor(dictionary=True) as cursor:
+        with db.cursor() as cursor:
             cursor.execute(
                 "SELECT display_name, email FROM users WHERE username = %s", (username,)
             )

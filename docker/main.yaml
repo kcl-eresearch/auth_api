@@ -16,3 +16,6 @@ mfa_timeout:
   rejected: 30
 service_account_regex:
 - "^er_svc_"
+
+dashboard:
+  enabled: true

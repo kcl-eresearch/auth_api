@@ -19,6 +19,7 @@ def create_app():
 
     mysql = MySQL()
     mysql.init_app(app)
+    app.db = mysql
 
     app.config["migrations_path"] = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../db/migrations")
@@ -43,8 +44,9 @@ def create_app():
     app.register_blueprint(api_v1)
 
     # Register the dashboard.
-    from auth_api.views.dashboard import dashboard
-    app.register_blueprint(dashboard)
+    if app.config["authapi"]["dashboard"]["enabled"]:
+        from auth_api.views.dashboard import dashboard
+        app.register_blueprint(dashboard)
 
     # Register the SSH CLI.
     from auth_api.commands.ssh import cli_ssh
