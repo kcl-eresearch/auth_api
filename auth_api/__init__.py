@@ -1,6 +1,7 @@
 import os
 import logging
 import logging.handlers
+import pymysql
 
 logger = logging.getLogger("AuthAPI")
 handler = logging.handlers.SysLogHandler(address="/dev/log")
@@ -8,16 +9,19 @@ logger.addHandler(handler)
 
 from dotenv import load_dotenv
 from flask import Flask, g
+from flask_wtf.csrf import CSRFProtect
 from flaskext.mysql import MySQL
 from auth_api.common import get_config
 
+csrf = CSRFProtect()
 
 def create_app():
     load_dotenv()
 
     app = Flask(__name__)
+    csrf.init_app(app)
 
-    mysql = MySQL()
+    mysql = MySQL(app=None, prefix="mysql", cursorclass=pymysql.cursors.DictCursor)
     mysql.init_app(app)
     app.db = mysql
 
@@ -32,6 +36,7 @@ def create_app():
     app.config["ldap"] = get_config("/etc/auth_api/ldap.yaml")
     app.config["ca"] = get_config("/etc/auth_api/ca.yaml")
 
+    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
     app.config["MYSQL_DATABASE_HOST"] = os.getenv("MYSQL_DATABASE_HOST")
     app.config["MYSQL_DATABASE_USER"] = os.getenv("MYSQL_DATABASE_USER")
     app.config["MYSQL_DATABASE_PASSWORD"] = os.getenv("MYSQL_DATABASE_PASSWORD")
@@ -42,6 +47,7 @@ def create_app():
     # Register the API.
     from auth_api.views.api import api_v1
     app.register_blueprint(api_v1)
+    csrf.exempt(api_v1)
 
     # Register the dashboard.
     if app.config["authapi"]["dashboard"]["enabled"]:

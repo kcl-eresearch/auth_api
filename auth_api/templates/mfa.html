@@ -31,8 +31,16 @@
                     <td>{{ request.expires_at }}</td>
                     <td>{{ request.status }}</td>
                     <td>
-                        <a href="/mfa/{{ request.id }}/approve" class="btn btn-success btn-sm">Approve</a>
-                        <a href="/mfa/{{ request.id }}/deny" class="btn btn-danger btn-sm">Deny</a>
+                        <form method="post" action="/mfa/{{ request.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="action" value="approved"/>
+                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                        </form>
+                        <form method="post" action="/mfa/{{ request.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="action" value="rejected"/>
+                            <button type="submit" class="btn btn-danger btn-sm">Deny</button>
+                        </form>
                     </td>
                 </tr>
                 {% else %}

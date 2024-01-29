@@ -203,7 +203,7 @@ def api_set_vpn_key(username, key_name):
 
     try:
         with open(
-            os.path.join(current_app.config["templates_path"], "vpn_template.j2")
+            os.path.join(config["templates_path"], "vpn_template.j2")
         ) as fh:
             vpn_template = jinja2.Template(fh.read())
     except Exception:
@@ -359,7 +359,7 @@ Set a user's SSH keys
 
 @api_v1.route(f"/v1/ssh_keys/<username>", methods=["PUT"])
 def api_set_user_ssh_keys(username):
-    global config
+    config = current_app.config
 
     user_id = get_user_id(username)
     if not user_id:
@@ -390,7 +390,7 @@ def api_set_user_ssh_keys(username):
 
                 if (
                     "type" not in key
-                    or key["type"] not in config["main"]["ssh_key_types"]
+                    or key["type"] not in config["authapi"]["ssh_key_types"]
                 ):
                     return api_response(
                         {"status": "ERROR", "detail": "Invalid key type"}, 400
@@ -512,6 +512,7 @@ Approve (or reject) user MFA request
 
 @api_v1.route(f"/v1/mfa_requests/<username>", methods=["POST"])
 def api_set_mfa_request(username):
+    config = current_app.config
     user_id = get_user_id(username)
     if not user_id:
         return api_response({"status": "ERROR", "detail": "User not found"}, 404)
@@ -557,7 +558,7 @@ def api_set_mfa_request(username):
                     mfa_request["status"],
                     datetime.datetime.now()
                     + datetime.timedelta(
-                        minutes=config["main"]["mfa_timeout"][mfa_request["status"]]
+                        minutes=config["authapi"]["mfa_timeout"][mfa_request["status"]]
                     ),
                     user_id,
                     mfa_request["service"],
@@ -754,6 +755,7 @@ Authenticate user SSH access without MFA
 
 @api_v1.route(f"/v1/ssh_auth_no_mfa/<username>", methods=["GET"])
 def api_auth_ssh_access_no_mfa(username):
+    config = current_app.config
     keys = get_user_ssh_keys(username)
     if keys == False:
         return api_response(
@@ -761,7 +763,7 @@ def api_auth_ssh_access_no_mfa(username):
         )
 
     is_service_account = False
-    for regex in config["main"]["service_account_regex"]:
+    for regex in config["authapi"]["service_account_regex"]:
         if re.match(regex, username):
             is_service_account = True
     if is_service_account:

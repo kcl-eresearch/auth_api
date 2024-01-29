@@ -208,7 +208,7 @@ def get_mfa_requests(username, service="all"):
     try:
         with db.cursor() as cursor:
             cursor.execute(
-                "SELECT created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s AND (created_at > NOW() - INTERVAL 7 DAY OR expires_at > NOW())",
+                "SELECT id, created_at, updated_at, expires_at, service, remote_ip, status FROM mfa_requests WHERE user_id = %s AND (created_at > NOW() - INTERVAL 7 DAY OR expires_at > NOW())",
                 (user_id,),
             )
             result = cursor.fetchall()
