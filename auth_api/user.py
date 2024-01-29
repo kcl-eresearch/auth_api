@@ -83,7 +83,7 @@ def get_user_ssh_keys(username):
     try:
         with db.cursor() as cursor:
             cursor.execute(
-                "SELECT created_at, name, type, pub_key, allowed_ips, access_type FROM ssh_keys WHERE user_id = %s",
+                "SELECT id, created_at, name, type, pub_key, allowed_ips, access_type FROM ssh_keys WHERE user_id = %s",
                 (user_id,),
             )
             result = cursor.fetchall()
