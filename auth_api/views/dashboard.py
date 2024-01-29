@@ -1,7 +1,9 @@
 import datetime
+import json
 from flask import Blueprint, render_template, request, redirect
 from auth_api.common import get_db
 from auth_api.user import *
+from auth_api.views.api import api_set_vpn_key
 
 dashboard = Blueprint("dashboard", __name__)
 
@@ -98,3 +100,15 @@ def ssh_add():
 @dashboard.route(f"/vpn", methods=["GET"])
 def vpn():
     return render_template('vpn.html')
+
+@dashboard.route(f"/vpn", methods=["POST"])
+def vpn_add():
+    name = request.form.get("name")
+
+    res = api_set_vpn_key(request.remote_user, name)
+    resdata = json.loads(res.data.decode('utf-8'))
+
+    if resdata['status'] == 'OK':
+        return render_template('vpn_download.html', config=resdata['config'])
+
+    raise Exception(f"Failed adding VPN key for {request.remote_user}:\n")
