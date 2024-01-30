@@ -10,8 +10,7 @@ dashboard = Blueprint("dashboard", __name__)
 @dashboard.before_request
 def dashboard_before_request():
     if not request.remote_user:
-        request.environ['REMOTE_USER'] = 'testuser'
-        #return render_template('access_denied.html'), 403
+        return render_template('access_denied.html'), 403
 
 @dashboard.route(f"/", methods=["GET"])
 def home():
