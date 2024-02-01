@@ -62,7 +62,7 @@ def migrate_database(mysql, migrations_path):
 
         with db.cursor() as cursor:
             cursor.execute(
-                "CREATE TABLE IF NOT EXISTS migrations(migration VARCHAR(255), id bigint unsigned NOT NULL AUTO_INCREMENT, PRIMARY_KEY (id))"
+                "CREATE TABLE IF NOT EXISTS migrations(migration VARCHAR(255), id bigint unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id))"
             )
 
         with db.cursor() as cursor:
