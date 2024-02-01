@@ -7,7 +7,6 @@ logger = logging.getLogger("AuthAPI")
 handler = logging.handlers.SysLogHandler(address="/dev/log")
 logger.addHandler(handler)
 
-from dotenv import load_dotenv
 from flask import Flask, g
 from flask_wtf.csrf import CSRFProtect
 from flaskext.mysql import MySQL
@@ -16,8 +15,6 @@ from auth_api.common import get_config
 csrf = CSRFProtect()
 
 def create_app():
-    load_dotenv()
-
     app = Flask(__name__)
     csrf.init_app(app)
 
