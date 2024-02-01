@@ -35,12 +35,7 @@ def create_app():
     app.config["smtp"] = get_config("/etc/auth_api/smtp.yaml")
     app.config["ldap"] = get_config("/etc/auth_api/ldap.yaml")
     app.config["ca"] = get_config("/etc/auth_api/ca.yaml")
-
-    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
-    app.config["MYSQL_DATABASE_HOST"] = os.getenv("MYSQL_DATABASE_HOST")
-    app.config["MYSQL_DATABASE_USER"] = os.getenv("MYSQL_DATABASE_USER")
-    app.config["MYSQL_DATABASE_PASSWORD"] = os.getenv("MYSQL_DATABASE_PASSWORD")
-    app.config["MYSQL_DATABASE_DB"] = os.getenv("MYSQL_DATABASE_DB")
+    app.config.update(get_config("/etc/auth_api/db.yaml"))
 
     migrate_database(mysql, app.config["migrations_path"])
 
@@ -53,18 +48,6 @@ def create_app():
     if app.config["authapi"]["dashboard"]["enabled"]:
         from auth_api.views.dashboard import dashboard
         app.register_blueprint(dashboard)
-
-    # Register the SSH CLI.
-    from auth_api.commands.ssh import cli_ssh
-    app.register_blueprint(cli_ssh)
-
-    # Register the VPN CLI.
-    from auth_api.commands.vpn import cli_vpn
-    app.register_blueprint(cli_vpn)
-
-    # Register the admin CLI.
-    from auth_api.commands.admin import cli_admin
-    app.register_blueprint(cli_admin)
 
     @app.teardown_appcontext
     def close_connection(exception):
