@@ -42,7 +42,7 @@ def create_app():
     csrf.exempt(api_v1)
 
     # Register the dashboard.
-    if "dashboard" in app.config["authapi"]["dashboard"] and app.config["authapi"]["dashboard"]["enabled"]:
+    if "dashboard" in app.config["authapi"] and app.config["authapi"]["dashboard"]["enabled"]:
         from auth_api.views.dashboard import dashboard
         app.register_blueprint(dashboard)
 
