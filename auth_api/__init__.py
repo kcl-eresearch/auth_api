@@ -33,6 +33,7 @@ def create_app():
     app.config["ldap"] = get_config("/etc/auth_api/ldap.yaml")
     app.config["ca"] = get_config("/etc/auth_api/ca.yaml")
     app.config.update(get_config("/etc/auth_api/db.yaml"))
+    app.config["SECRET_KEY"] = os.urandom(32)
 
     migrate_database(mysql, app.config["migrations_path"])
 

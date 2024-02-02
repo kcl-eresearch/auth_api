@@ -31,7 +31,7 @@ def auth_request(path, method, user):
         return False
 
     # Allow anyone to access status page
-    if re.match(r"^/api/v[0-9]+/status$"):
+    if re.match(r"^/api/v[0-9]+/status$", path):
         return True
 
     # Deny users not in config file
