@@ -31,7 +31,7 @@ def auth_request(path, method, user):
         return False
 
     # Allow anyone to access status page
-    if path == "/":
+    if re.match(r"^/api/v[0-9]+/status$"):
         return True
 
     # Deny users not in config file
@@ -47,7 +47,7 @@ def auth_request(path, method, user):
 
     # Handle bogus paths
     m = re.match(
-        r"^/v[0-9]+/([a-z_]+)(/[a-z0-9_]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?)?",
+        r"^/api/v[0-9]+/([a-z_]+)(/[a-z0-9_]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?)?",
         path,
     )
     if not m:
@@ -122,7 +122,7 @@ Status if nothing requested - also used for monitoring
 """
 
 
-@api_v1.route("/")
+@api_v1.route("/status")
 def api_status():
     db = get_db()
 
@@ -156,7 +156,7 @@ Return a list of user's SSH public keys
 """
 
 
-@api_v1.route(f"/v1/ssh_keys/<username>", methods=["GET"])
+@api_v1.route(f"/ssh_keys/<username>", methods=["GET"])
 def api_get_ssh_keys(username):
     keys = get_user_ssh_keys(username)
     if keys == False:
@@ -172,7 +172,7 @@ Return a list of user's VPN keys
 """
 
 
-@api_v1.route(f"/v1/vpn_keys/<username>", methods=["GET"])
+@api_v1.route(f"/vpn_keys/<username>", methods=["GET"])
 def api_get_vpn_keys(username):
     keys = get_user_vpn_keys(username)
     if keys == False:
@@ -188,7 +188,7 @@ Create new OpenVPN key/certificate
 """
 
 
-@api_v1.route(f"/v1/vpn_keys/<username>/<key_name>", methods=["POST"])
+@api_v1.route(f"/vpn_keys/<username>/<key_name>", methods=["POST"])
 def api_set_vpn_key(username, key_name):
     config = current_app.config
 
@@ -339,7 +339,7 @@ Revoke an OpenVPN key/certificate
 """
 
 
-@api_v1.route(f"/v1/vpn_keys/<username>/<key_name>", methods=["DELETE"])
+@api_v1.route(f"/vpn_keys/<username>/<key_name>", methods=["DELETE"])
 def api_revoke_vpn_key(username, key_name):
     user_id = get_user_id(username)
     if not user_id:
@@ -357,7 +357,7 @@ Set a user's SSH keys
 """
 
 
-@api_v1.route(f"/v1/ssh_keys/<username>", methods=["PUT"])
+@api_v1.route(f"/ssh_keys/<username>", methods=["PUT"])
 def api_set_user_ssh_keys(username):
     config = current_app.config
 
@@ -470,7 +470,7 @@ Get user's MFA requests
 """
 
 
-@api_v1.route(f"/v1/mfa_requests/<username>", methods=["GET"])
+@api_v1.route(f"/mfa_requests/<username>", methods=["GET"])
 def api_get_mfa_requests(username):
     user_id = get_user_id(username)
     if not user_id:
@@ -492,7 +492,7 @@ Get all users' MFA requests
 """
 
 
-@api_v1.route(f"/v1/mfa_requests", methods=["GET"])
+@api_v1.route(f"/mfa_requests", methods=["GET"])
 def api_get_mfa_requests_all():
     mfa_requests = get_mfa_requests_all()
     if mfa_requests == False:
@@ -510,7 +510,7 @@ Approve (or reject) user MFA request
 """
 
 
-@api_v1.route(f"/v1/mfa_requests/<username>", methods=["POST"])
+@api_v1.route(f"/mfa_requests/<username>", methods=["POST"])
 def api_set_mfa_request(username):
     config = current_app.config
     user_id = get_user_id(username)
@@ -581,7 +581,7 @@ Authenticate user VPN access
 """
 
 
-@api_v1.route(f"/v1/vpn_auth/<cert_cn>/<ip_address>", methods=["GET"])
+@api_v1.route(f"/vpn_auth/<cert_cn>/<ip_address>", methods=["GET"])
 def api_auth_vpn_access(cert_cn, ip_address):
     db = get_db()
     try:
@@ -691,7 +691,7 @@ Authenticate user SSH access
 """
 
 
-@api_v1.route(f"/v1/ssh_auth/<username>/<ip_address>", methods=["GET"])
+@api_v1.route(f"/ssh_auth/<username>/<ip_address>", methods=["GET"])
 def api_auth_ssh_access(username, ip_address):
     user_id = get_user_id(username)
     if not user_id:
@@ -753,7 +753,7 @@ Authenticate user SSH access without MFA
 """
 
 
-@api_v1.route(f"/v1/ssh_auth_no_mfa/<username>", methods=["GET"])
+@api_v1.route(f"/ssh_auth_no_mfa/<username>", methods=["GET"])
 def api_auth_ssh_access_no_mfa(username):
     config = current_app.config
     keys = get_user_ssh_keys(username)
@@ -799,7 +799,7 @@ Update users table
 """
 
 
-@api_v1.route(f"/v1/maint/update_users", methods=["POST"])
+@api_v1.route(f"/maint/update_users", methods=["POST"])
 def api_update_users():
     db = get_db()
     try:

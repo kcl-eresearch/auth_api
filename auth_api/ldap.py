@@ -2,6 +2,7 @@ import ldap
 import sys
 import traceback
 from flask import current_app
+from ldap import filter
 
 """
 Initialise LDAP connection
