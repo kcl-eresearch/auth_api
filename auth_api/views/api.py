@@ -287,8 +287,8 @@ def api_set_vpn_key(username, key_name):
             cursor.execute(
                 "INSERT INTO vpn_keys(created_at, expires_at, user_id, uuid, name, public_cert, status) VALUES(%s, %s, %s, %s, %s, %s, 'active')",
                 (
-                    cert.not_valid_before,
-                    cert.not_valid_after,
+                    cert.not_valid_before_utc,
+                    cert.not_valid_after_utc,
                     user_id,
                     cert_uuid,
                     key_name,
@@ -311,8 +311,8 @@ def api_set_vpn_key(username, key_name):
 
     vpn_config = vpn_template.render(
         cert_uuid=cert_uuid,
-        cert_created=cert.not_valid_before.strftime("%Y-%m-%d %H:%M:%S"),
-        cert_expires=cert.not_valid_after.strftime("%Y-%m-%d %H:%M:%S"),
+        cert_created=cert.not_valid_before_utc.strftime("%Y-%m-%d %H:%M:%S"),
+        cert_expires=cert.not_valid_after_utc.strftime("%Y-%m-%d %H:%M:%S"),
         ca_cert=ca_cert.strip(),
         public_cert=data_crt.strip(),
         private_key=data_key.strip(),
@@ -324,8 +324,8 @@ def api_set_vpn_key(username, key_name):
             "status": "OK",
             "public_cert": data_crt,
             "private_key": data_key,
-            "created_at": int(cert.not_valid_before.timestamp()),
-            "expires_at": int(cert.not_valid_after.timestamp()),
+            "created_at": int(cert.not_valid_before_utc.timestamp()),
+            "expires_at": int(cert.not_valid_after_utc.timestamp()),
             "name": key_name,
             "status": "active",
             "uuid": cert_uuid,
