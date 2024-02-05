@@ -16,7 +16,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from flask import Blueprint, current_app, Response, request
 
-api_v1 = Blueprint("apiv1", __name__, url_prefix="/api/v1")
+api_v1 = Blueprint("apiv1", __name__)
 
 
 """

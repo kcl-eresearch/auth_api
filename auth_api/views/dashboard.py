@@ -5,7 +5,7 @@ from auth_api.common import get_db
 from auth_api.user import *
 from auth_api.views.api import api_set_vpn_key
 
-dashboard = Blueprint("dashboard", __name__)
+dashboard = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
 @dashboard.before_request
 def dashboard_before_request():
