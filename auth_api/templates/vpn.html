@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col">
+        <h2>OpenVPN Certificates</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <h5 class="card-header">OpenVPN Certificates</h5>
+    <div class="card-body">
+        <table class="table table-fixed">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Created at</th>
+                    <th scope="col">Expires at</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for vpn_key in vpn_keys %}
+                <tr>
+                    <th scope="row">{{ vpn_key.name }}</th>
+                    <td>{{ vpn_key.status }}</td>
+                    <td>{{ vpn_key.created_at }}</td>
+                    <td>{{ vpn_key.expires_at }}</td>
+                    <td>
+                        {% if vpn_key.status == 'active' %}
+                        <form action="/dashboard/vpn/{{ vpn_key.id }}/revoke" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-danger btn-sm btn-submit">Revoke</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5">No certificates found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="card mb-4">
+    <h5 class="card-header">Request new OpenVPN key</h5>
+    <div class="card-body">
+        <form action="/dashboard/vpn" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <div class="form-group">
+            <label for="name">Key Name</label>
+            <input type="text" class="form-control" name="name" placeholder="work-laptop">
+          </div>
+
+          <button type="submit" class="btn btn-secondary">Submit</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

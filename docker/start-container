@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+cd /app
+poetry install
+exec poetry run flask --app auth_api --debug run --host=0.0.0.0

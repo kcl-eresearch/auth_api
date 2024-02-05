@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col">
+        <h2>SSH Keys</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <h5 class="card-header">SSH Keys</h5>
+    <div class="card-body">
+        <table class="table table-fixed">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">SSH Key</th>
+                    <th scope="col">Created at</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ssh_key in ssh_keys %}
+                <tr>
+                    <th scope="row">{{ ssh_key.name }}</th>
+                    <td><textarea class="form-control">{{ ssh_key.type }} {{ ssh_key.pub_key }}</textarea></td>
+                    <td>{{ ssh_key.created_at }}</td>
+                    <td>
+                        <form action="/dashboard/ssh/{{ ssh_key.id }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-danger btn-sm btn-submit">Revoke</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">No SSH keys found.</td> 
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="card mb-4">
+    <h5 class="card-header">Add new SSH key</h5>
+    <div class="card-body">
+        <form action="/dashboard/ssh/new" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <div class="form-group">
+            <label for="sshkey">SSH Key</label>
+            <input type="text" class="form-control" name="ssh_key" placeholder="ssh-rsa ... test@test" required>
+          </div>
+
+          <button type="submit" class="btn btn-secondary">Submit</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col">
+        <h2>OpenVPN Certificates</h2>
+        <hr>
+    </div>
+</div>
+<div class="card mb-4">
+    <h5 class="card-header">Your OpenVPN config</h5>
+    <div class="card-body">
+        <textarea class="form-control" rows="10">{{ config }}</textarea>
+        <a href="/dashboard/vpn" class="btn btn-secondary mt-2">Back</a>
+    </div>
+</div>
+{% endblock %}

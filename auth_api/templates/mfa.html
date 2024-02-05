@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col">
+        <h2>Access Approvals</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <h5 class="card-header">Access Approvals</h5>
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Remote IP address</th>
+                    <th>Last updated</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in mfa_requests %}
+                <tr>
+                    <td>{{ request.service }}</td>
+                    <td>{{ request.remote_ip }}</td>
+                    <td>{{ request.updated_at }}</td>
+                    <td>{{ request.expires_at }}</td>
+                    <td>{{ request.status }}</td>
+                    <td>
+                        {% if request.status == 'pending' %}
+                        <form method="post" action="/dashboard/mfa/{{ request.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="action" value="approved"/>
+                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                        </form>
+                        <form method="post" action="/dashboard/mfa/{{ request.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="action" value="rejected"/>
+                            <button type="submit" class="btn btn-danger btn-sm">Deny</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">No requests found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

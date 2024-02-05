@@ -1,0 +1,7 @@
+---
+username: test
+password: test
+server: localhost
+port: 587
+from_name: Test Account
+from_addr: noreply@localhost

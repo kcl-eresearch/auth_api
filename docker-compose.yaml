@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+    auth_api_test:
+        build: .
+        image: authapi/app
+        ports:
+            - '${APP_PORT:-5000}:5000'
+        volumes:
+            - '.:/app'
+        networks:
+            - authapi
+        depends_on:
+            - mysql
+        environment:
+            MYSQL_DATABASE_HOST: 'mysql'
+            MYSQL_DATABASE_USER: '${DB_USERNAME}'
+            MYSQL_DATABASE_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_DATABASE_DB: '${DB_DATABASE}'
+    mysql:
+        image: 'mysql:8.0'
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        volumes:
+            - 'mysql:/var/lib/mysql'
+        networks:
+            - authapi
+        healthcheck:
+          test: ["CMD", "mysqladmin", "ping"]
+networks:
+    authapi:
+        driver: bridge
+volumes:
+    mysql:
+        driver: local
