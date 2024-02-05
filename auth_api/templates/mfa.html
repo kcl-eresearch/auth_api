@@ -32,12 +32,12 @@
                     <td>{{ request.status }}</td>
                     <td>
                         {% if request.status == 'pending' %}
-                        <form method="post" action="/mfa/{{ request.id }}">
+                        <form method="post" action="/dashboard/mfa/{{ request.id }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="action" value="approved"/>
                             <button type="submit" class="btn btn-success btn-sm">Approve</button>
                         </form>
-                        <form method="post" action="/mfa/{{ request.id }}">
+                        <form method="post" action="/dashboard/mfa/{{ request.id }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="action" value="rejected"/>
                             <button type="submit" class="btn btn-danger btn-sm">Deny</button>
