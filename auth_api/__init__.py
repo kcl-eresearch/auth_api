@@ -25,15 +25,16 @@ def create_app():
     app.config["migrations_path"] = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../db/migrations")
     )
-    app.config["templates_path"] = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "templates")
-    )
     app.config["authapi"] = get_config("/etc/auth_api/main.yaml")
     app.config["smtp"] = get_config("/etc/auth_api/smtp.yaml")
     app.config["ldap"] = get_config("/etc/auth_api/ldap.yaml")
     app.config["ca"] = get_config("/etc/auth_api/ca.yaml")
     app.config.update(get_config("/etc/auth_api/db.yaml"))
     app.config["SECRET_KEY"] = os.urandom(32)
+    if "templates_path" not in app.config["authapi"]:
+        app.config["authapi"]["templates_path"] = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "templates")
+        )
 
     migrate_database(mysql, app.config["migrations_path"])
 

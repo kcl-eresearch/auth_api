@@ -111,7 +111,7 @@ def send_email(username, service):
 
     try:
         with open(
-            os.path.join(current_app.config["templates_path"], "mail_template.j2")
+            os.path.join(current_app.config["authapi"]["templates_path"], "mail_template.j2")
         ) as fh:
             mail_template = jinja2.Template(fh.read())
     except Exception:

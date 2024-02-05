@@ -203,7 +203,7 @@ def api_set_vpn_key(username, key_name):
 
     try:
         with open(
-            os.path.join(config["templates_path"], "vpn_template.j2")
+            os.path.join(config["authapi"]["templates_path"], "vpn_template.j2")
         ) as fh:
             vpn_template = jinja2.Template(fh.read())
     except Exception:
