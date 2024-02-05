@@ -16,7 +16,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from flask import Blueprint, current_app, Response, request
 
-api_v1 = Blueprint("apiv1", __name__, url_prefix="/v1")
+api_v1 = Blueprint("apiv1", __name__, url_prefix="/api/v1")
 
 
 """
@@ -47,7 +47,7 @@ def auth_request(path, method, user):
 
     # Handle bogus paths
     m = re.match(
-        r"^/v[0-9]+/([a-z_]+)(/[a-z0-9_]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?)?",
+        r"^/api/v[0-9]+/([a-z_]+)(/[a-z0-9_]+(/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?)?",
         path,
     )
     if not m:
