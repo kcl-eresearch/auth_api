@@ -445,7 +445,7 @@ def api_set_user_ssh_keys(username):
                         extra_options = json.dumps(extra_options)
 
                     cursor.execute(
-                        "INSERT INTO ssh_keys(created_at, user_id, type, name, pub_key, allowed_ips, access_type) VALUES(NOW(), %s, %s, %s, %s, %s, %s)",
+                        "INSERT INTO ssh_keys(created_at, user_id, type, name, pub_key, allowed_ips, access_type, extra_options) VALUES(NOW(), %s, %s, %s, %s, %s, %s, %s)",
                         (
                             user_id,
                             key["type"],
