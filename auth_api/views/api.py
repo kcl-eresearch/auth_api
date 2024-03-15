@@ -63,6 +63,7 @@ def auth_request(path, method, user):
             ("vpn_keys", "GET"),
             ("vpn_keys", "POST"),
             ("vpn_keys", "DELETE"),
+            ("vpn_keys_crl", "GET"),
             ("mfa_requests", "GET"),
             ("mfa_requests", "POST"),
         ],
@@ -71,11 +72,15 @@ def auth_request(path, method, user):
             ("ssh_auth_no_mfa", "GET"),
             ("ssh_keys", "GET"),
             ("vpn_auth", "GET"),
+            ("vpn_keys_crl", "GET"),
         ],
-        current_app.config["authapi"]["auth_user_maint"]: [("maint", "POST")],
+        current_app.config["authapi"]["auth_user_maint"]: [
+            ("maint", "POST")
+        ],
         current_app.config["authapi"]["auth_user_admin"]: [
             ("ssh_keys", "GET"),
             ("vpn_keys", "GET"),
+            ("vpn_keys_crl", "GET"),
             ("mfa_requests", "GET"),
         ],
     }
@@ -181,6 +186,25 @@ def api_get_vpn_keys(username):
         )
 
     return api_response({"status": "OK", "keys": make_serializable(keys)})
+
+
+"""
+Return CRL from VPN key CA
+"""
+
+
+@api_v1.route("/vpn_keys_crl", methods=["GET"])
+def api_get_vpn_keys_crl():
+    config = current_app.config
+    ca_provider = importlib.import_module(config["authapi"]["ca_provider"])
+
+    crl = ca_provider.get_crl()
+    if crl == None:
+        return api_response(
+            {"status": "ERROR", "detail": "CRL not available for CA provider"}, 501
+        )
+
+    return api_response({"status": "OK", "crl": crl})
 
 
 """
