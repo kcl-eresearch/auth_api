@@ -1,6 +1,7 @@
 import sys
 import traceback
 import subprocess
+import importlib
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from auth_api.common import get_db
@@ -131,6 +132,8 @@ def revoke_vpn_key(username, key_name):
     db = get_db()
     config = current_app.config
 
+    ca_provider = importlib.import_module(config["main"]["ca_provider"])
+
     user_id = get_user_id(username)
     if not user_id:
         return False
@@ -149,46 +152,23 @@ def revoke_vpn_key(username, key_name):
         sys.stderr.write(traceback.format_exc())
         return False
 
-    try:
-        for certificate in result:
-            with db.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE vpn_keys SET status = 'revoked' WHERE id = %s",
-                    (certificate["id"],),
+    for certificate in result:
+        if ca_provider.revoke_vpn_cert(certificate["public_cert"]):
+            try:
+                with db.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE vpn_keys SET status = 'revoked' WHERE id = %s",
+                        (certificate["id"],),
+                    )
+                db.commit()
+            except Exception:
+                sys.stderr.write(
+                    f"Failed setting revocation status in database for user {username} certificate {key_name}:\n"
                 )
-            cert_data = x509.load_pem_x509_certificate(
-                certificate["public_cert"].encode("utf8"), default_backend()
-            )
-            serial_number = str(cert_data.serial_number)
-            token = subprocess.check_output(
-                [
-                    config["ca"]["exe"],
-                    "ca",
-                    "token",
-                    "--provisioner",
-                    config["ca"]["provisioner"],
-                    "--password-file",
-                    "/etc/auth_api/ca_password.txt",
-                    "--ca-url",
-                    config["ca"]["url"],
-                    "--root",
-                    config["ca"]["root_crt"],
-                    "--revoke",
-                    serial_number,
-                ],
-                stderr=subprocess.DEVNULL,
-            ).strip()
-            revoke = subprocess.check_output(
-                [config["ca"]["exe"], "ca", "revoke", serial_number, "--token", token],
-                stderr=subprocess.DEVNULL,
-            )
-        db.commit()
-    except Exception:
-        sys.stderr.write(
-            f"Failed setting revocation status in database for user {username} certificate {key_name}:\n"
-        )
-        sys.stderr.write(traceback.format_exc())
-        return False
+                sys.stderr.write(traceback.format_exc())
+                return False
+        else:
+            return False
 
     return True
 

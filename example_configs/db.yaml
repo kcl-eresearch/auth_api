@@ -1,0 +1,5 @@
+---
+MYSQL_DATABASE_HOST: mysql.example.com
+MYSQL_DATABASE_USER: auth_api
+MYSQL_DATABASE_PASSWORD: "My Secure Database Password"
+MYSQL_DATABASE_DB: auth_api

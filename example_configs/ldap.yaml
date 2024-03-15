@@ -1,0 +1,7 @@
+---
+host: ldap.example.com
+base_dn: DC=ad,DC=example,DC=com
+bind_dn: er_auth_api@ad.example.com
+bind_pw: "My Secure LDAP Password"
+ca_file: "/etc/ssl/certs/ca-certificates.crt"
+blocked_users_group: CN=blocked_users,OU=groups,DC=ad,DC=example,DC=com

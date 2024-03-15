@@ -1,0 +1,9 @@
+---
+host: vaultca.example.com
+port: 8200
+username: auth_api
+password: "My Secure Vault Password"
+role: auth_api
+cert_lifetime: 365
+cert_domain: "vpn-clients.example.com"
+tls_verify: /etc/ssl/certs/ca-certificates.crt

@@ -1,0 +1,7 @@
+---
+username: auth_api
+password: "My Secure SMTP Password"
+server: mail.example.com
+port: 587
+from_name: University HPC
+from_addr: noreply@hpc.example.com

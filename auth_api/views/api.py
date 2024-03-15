@@ -5,11 +5,11 @@ import os
 import re
 import shutil
 import socket
-import subprocess
 import sys
 import tempfile
 import traceback
 import uuid
+import importlib
 from auth_api.common import make_serializable, send_email, get_db, validate_ssh_key
 from auth_api.user import *
 from cryptography import x509
@@ -191,6 +191,7 @@ Create new OpenVPN key/certificate
 @api_v1.route(f"/vpn_keys/<username>/<key_name>", methods=["POST"])
 def api_set_vpn_key(username, key_name):
     config = current_app.config
+    ca_provider = importlib.import_module(config["main"]["ca_provider"])
 
     user_id = get_user_id(username)
     if not user_id:
@@ -223,46 +224,15 @@ def api_set_vpn_key(username, key_name):
             {"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500
         )
 
-    try:
-        subprocess.check_output(
-            [
-                config["ca"]["exe"],
-                "ca",
-                "certificate",
-                "--provisioner",
-                config["ca"]["provisioner"],
-                "--provisioner-password-file",
-                "/etc/auth_api/ca_password.txt",
-                "--ca-url",
-                config["ca"]["url"],
-                "--root",
-                config["ca"]["root_crt"],
-                "--not-after",
-                "%dh" % (24 * config["ca"]["cert_lifetime"]),
-                cert_uuid,
-                path_crt,
-                path_key,
-            ],
-            stderr=subprocess.STDOUT,
-        )
-    except Exception:
-        sys.stderr.write("Failed generating VPN key/certificate:\n")
-        sys.stderr.write(traceback.format_exc())
+    result = ca_provider.issue_vpn_cert(cert_uuid)
+
+    if not result:
         return api_response(
             {"status": "ERROR", "detail": "VPN key/certificate generation failed"}, 500
         )
 
-    try:
-        with open(path_crt) as fh:
-            data_crt = fh.read()
-        with open(path_key) as fh:
-            data_key = fh.read()
-    except Exception:
-        sys.stderr.write("Failed reading new VPN key/certificate:\n")
-        sys.stderr.write(traceback.format_exc())
-        return api_response(
-            {"status": "ERROR", "detail": "VPN key/certificate read failed"}, 500
-        )
+    data_crt = result[0]
+    data_key = result[1]
 
     try:
         cert = x509.load_pem_x509_certificate(

@@ -1,0 +1,7 @@
+---
+exe: "/usr/bin/step"
+url: https://stepca.example.com/
+provisioner: auth_api
+cert_lifetime: 365
+root_crt: "/etc/ssl/certs/My-Root-CA.pem"
+cert_domain: "vpn-clients.example.com"
