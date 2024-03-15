@@ -191,7 +191,7 @@ Create new OpenVPN key/certificate
 @api_v1.route(f"/vpn_keys/<username>/<key_name>", methods=["POST"])
 def api_set_vpn_key(username, key_name):
     config = current_app.config
-    ca_provider = importlib.import_module(config["main"]["ca_provider"])
+    ca_provider = importlib.import_module(config["authapi"]["ca_provider"])
 
     user_id = get_user_id(username)
     if not user_id:
