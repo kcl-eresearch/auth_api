@@ -153,7 +153,7 @@ def revoke_vpn_key(username, key_name):
         for certificate in result:
             with db.cursor() as cursor:
                 cursor.execute(
-                    "UPDATE vpn_keys SET status = 'revoked' WHERE id = %s",
+                    "UPDATE vpn_keys SET status = 'revoked', revoked_at = NOW() WHERE id = %s",
                     (certificate["id"],),
                 )
             cert_data = x509.load_pem_x509_certificate(
