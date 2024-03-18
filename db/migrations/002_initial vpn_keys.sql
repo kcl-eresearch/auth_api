@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS `vpn_keys` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` timestamp NULL DEFAULT NULL,
   `expires_at` timestamp NULL DEFAULT NULL,
+  `revoked_at` timestamp NULL DEFAULT NULL,
   `user_id` bigint unsigned NOT NULL,
   `uuid` varchar(36) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
