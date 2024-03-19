@@ -101,17 +101,38 @@ def make_serializable(data):
 
 
 """
+Send an email
+"""
+
+
+def send_email(recipient_address, message):
+    smtp_config = current_app.config["smtp"]
+    try:
+        smtp = smtplib.SMTP(smtp_config["server"], smtp_config["port"])
+        smtp.starttls(context=ssl.create_default_context())
+        smtp.login(smtp_config["username"], smtp_config["password"])
+        smtp.sendmail(smtp_config["from_addr"], recipient_address, message)
+        smtp.quit()
+    except Exception:
+        sys.stderr.write("Failed sending mail message:\n")
+        sys.stderr.write(traceback.format_exc())
+        return False
+
+    return True
+
+
+"""
 Send email notification to user notifying of key changes
 """
 
 
-def send_email(username, service):
+def send_key_change_email(username, service):
     db = get_db()
     smtp_config = current_app.config["smtp"]
 
     try:
         with open(
-            os.path.join(current_app.config["authapi"]["templates_path"], "mail_template.j2")
+            os.path.join(current_app.config["authapi"]["templates_path"], "key_change_mail_template.j2")
         ) as fh:
             mail_template = jinja2.Template(fh.read())
     except Exception:
@@ -155,15 +176,4 @@ def send_email(username, service):
         sys.stderr.write(traceback.format_exc())
         return False
 
-    try:
-        smtp = smtplib.SMTP(smtp_config["server"], smtp_config["port"])
-        smtp.starttls(context=ssl.create_default_context())
-        smtp.login(smtp_config["username"], smtp_config["password"])
-        smtp.sendmail(smtp_config["from_addr"], result[0]["email"], mail_message)
-        smtp.quit()
-    except Exception:
-        sys.stderr.write("Failed sending mail message:\n")
-        sys.stderr.write(traceback.format_exc())
-        return False
-
-    return True
+    return send_email(result[0]["email"], mail_message)
