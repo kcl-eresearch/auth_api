@@ -10,7 +10,8 @@ import sys
 import tempfile
 import traceback
 import uuid
-from auth_api.common import make_serializable, send_email, get_db, validate_ssh_key
+import yaml
+from auth_api.common import make_serializable, send_key_change_email, send_email, get_db, validate_ssh_key
 from auth_api.user import *
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -318,7 +319,7 @@ def api_set_vpn_key(username, key_name):
         private_key=data_key.strip(),
     )
 
-    send_email(username, "vpn")
+    send_key_change_email(username, "vpn")
     return api_response(
         {
             "status": "OK",
@@ -348,7 +349,7 @@ def api_revoke_vpn_key(username, key_name):
     if not revoke_vpn_key(username, key_name):
         return api_response({"status": "ERROR", "detail": "Revocation failed"}, 500)
 
-    send_email(username, "vpn")
+    send_key_change_email(username, "vpn")
     return api_get_vpn_keys(username)
 
 
@@ -473,7 +474,7 @@ def api_set_user_ssh_keys(username):
             {"status": "ERROR", "detail": "Failed saving SSH keys"}, 500
         )
 
-    send_email(username, "ssh")
+    send_key_change_email(username, "ssh")
     return api_get_ssh_keys(username)
 
 
@@ -804,6 +805,74 @@ def api_auth_ssh_access_no_mfa(username):
         valid_keys = keys
 
     return api_response({"status": "OK", "keys": make_serializable(valid_keys)})
+
+"""
+Notify users of expiring VPN certs
+"""
+
+
+@api_v1.route(f"/maint/notify_vpn_expiry", methods=["POST"])
+def notify_vpn_expiry():
+    smtp_config = current_app.config["smtp"]
+    db = get_db()
+    days = 7
+    now = datetime.datetime.now()
+
+    try:
+        with open(
+            os.path.join(current_app.config["authapi"]["templates_path"], "vpn_expiry_mail_template.j2")
+        ) as fh:
+            mail_template = jinja2.Template(fh.read())
+    except Exception:
+        sys.stderr.write("Failed loading mail template:\n")
+        sys.stderr.write(traceback.format_exc())
+        return api_response(
+            {"status": "ERROR", "detail": "Failed loading mail template"}, 500
+        )
+
+    try:
+        with db.cursor() as cursor:
+            cursor.execute(
+                "SELECT vpn_keys.expires_at AS cert_expires, vpn_keys.name AS cert_name, users.display_name AS user_name, users.email AS user_email FROM vpn_keys INNER JOIN users ON vpn_keys.user_id = users.id WHERE vpn_keys.status = 'active' AND users.deleted_at IS NULL AND vpn_keys.expires_at >= %s AND vpn_keys.expires_at < %s", (now + datetime.timedelta(days=days), now + datetime.timedelta(days=days + 1))
+            )
+            result = cursor.fetchall()
+    except Exception:
+        sys.stderr.write("Failed getting expiring VPN keys:\n")
+        sys.stderr.write(traceback.format_exc())
+        return api_response(
+            {"status": "ERROR", "detail": "Failed getting expiring VPN keys"}, 500
+        )
+
+    errors = 0
+    sent = 0
+
+    for row in result:
+        try:
+            message_text = mail_template.render(
+                from_name=smtp_config["from_name"],
+                from_addr=smtp_config["from_addr"],
+                display_name=row["user_name"],
+                user_email=row["user_email"],
+                certificate_name = re.sub("[^\w-]", "", row["cert_name"]),
+                expiry_date = row["cert_expires"].strftime("%Y-%m-%d")
+            )
+        except Exception:
+            sys.stderr.write("Failed rendering mail message:\n")
+            sys.stderr.write(traceback.format_exc())
+            errors += 1
+            continue
+
+        if send_email(row["user_email"], message_text):
+            sent += 1
+        else:
+            errors += 1
+
+    if errors == 0:
+        return api_response({"status": "OK", "email_count": sent})
+
+    return api_response(
+        {"status": "ERROR", "detail": "Failed sending %d messages (sent %d)" % (errors, sent)}, 500
+    )
 
 
 """
